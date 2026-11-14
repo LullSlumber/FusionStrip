@@ -13,6 +13,7 @@ import android.os.Looper;
 import com.jj.nexusfloat.bridge.NexusBridge;
 import com.jj.nexusfloat.constant.Constants;
 import com.jj.nexusfloat.utils.LogUtils;
+import com.jj.nexusfloat.utils.RootShell;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -91,7 +92,21 @@ public class PerformanceCollector {
     private final ActivityManager activityManager;
 
     // CPU calculation state
-    private final long[][] lastCpuTimes = new long[16][2]; // [core][0: idle, 1: total], index 0 is total CPU
+    // [0]=整机（"cpu" 行），1..15 = cpu0..cpu14；[x][0]=idle+iowait，[x][1]=total
+    private static final int CPU_SLOTS = 16;
+    private static final int CPU_ROOT_FALLBACK_TROUBLES = 3;
+    private final long[][] lastCpuTimes = new long[CPU_SLOTS][2];
+    private final float[] lastCpuUsage = new float[CPU_SLOTS];
+    /** 连续读不到/没推进的拍数，攒够 CPU_ROOT_FALLBACK_TROUBLES 拍就切 root 通道 */
+    private int cpuTrouble = 0;
+    /** 是否已切换到 root 通道读 /proc/stat */
+    private boolean cpuViaRoot = false;
+    /** root 通道连续失败计数与熔断：没给 root 的机器上避免每拍都去拉 su */
+    private int rootMiss = 0;
+    private boolean rootReadUnusable = false;
+    /** 上一拍成功读到的值；这一拍两条路都没读到时沿用，不写假 0 */
+    private float lastCpuTotalUsage = 0f;
+    private List<Float> lastCpuCoreUsages = null;
 
     // Battery Intent state
     private float lastBatteryTemp = 0f;
@@ -356,55 +371,235 @@ public class PerformanceCollector {
         return data;
     }
 
+    /**
+     * /proc/stat 做差算整机与各核占用。
+     *
+     * 口径与帧记录（FrameSampler）完全一致，防护也一并对齐——原因：
+     * 部分 ROM 的内核/SELinux 把 system 域读 /proc/stat 的路拦了（多为 dontaudit，
+     * dmesg 里查不到痕迹），本地读文件直接抛 PermissionDenied；也有内核侧 jiffies
+     * 不推进的机型。老实现两条都没防：读不到就异常吞掉、占用恒 0；两拍没推进时
+     * 写死 0。表现就是「8 Elite 上 CPU 占用恒 0、柱状图空」。
+     *
+     * 修法（照抄 FrameSampler）：
+     * - 逐行容错 + 按 cpuN 落位，行序无关，单行坏只丢这一行；
+     * - 两拍之间没推进（dTotal <= 0）沿用上一次读数，不写假 0；
+     * - 本地连续 CPU_ROOT_FALLBACK_TROUBLES 拍读不到/没推进，自动切 root shell
+     *   读同一份文件（RootShell 常驻 su，系统界面被授权 root 后这条路是通的，
+     *   GPU 取数早已在用）；换通道时清基线，下一拍算「开机至今均值」，是正常非零数；
+     * - 两条路都没读到：沿用上一次的读数，绝不落 0。
+     */
     private void collectCpuData(PerformanceData data) {
+        CpuRow[] rows = cpuViaRoot ? readCpuStatViaRoot() : readCpuStatLocal();
+        if (rows == null || rows[0] == null) {
+            cpuTrouble++;
+            if (maybeFallBackToRoot()) {
+                rows = readCpuStatViaRoot();
+            }
+        }
+        if (rows == null || rows[0] == null) {
+            // 两条路都没读到：沿用上一次的读数，不写假的 0
+            data.cpuTotalUsage = lastCpuTotalUsage;
+            if (lastCpuCoreUsages != null) {
+                data.cpuCoreUsages = new ArrayList<>(lastCpuCoreUsages);
+            }
+            return;
+        }
+
+        // 先看这一拍相对上一拍有没有推进，再落值：usageOf 会把基线推到这一拍，
+        // 之后再取差值就永远是 0 了
+        long dTotal = rows[0].total - lastCpuTimes[0][1];
+        if (dTotal <= 0) {
+            cpuTrouble++;
+            if (maybeFallBackToRoot()) {
+                CpuRow[] viaRoot = readCpuStatViaRoot();
+                if (viaRoot != null && viaRoot[0] != null) {
+                    rows = viaRoot;
+                }
+            }
+        } else {
+            cpuTrouble = 0;
+        }
+
+        data.cpuTotalUsage = usageOf(0, rows[0]);
+
+        List<Float> cores = new ArrayList<>();
+        for (int slot = 1; slot < CPU_SLOTS; slot++) {
+            if (rows[slot] != null) {
+                cores.add(usageOf(slot, rows[slot]));
+            }
+        }
+        if (!cores.isEmpty()) {
+            data.cpuCoreUsages = cores;
+        } else if (lastCpuCoreUsages != null) {
+            // 整机行活着但核行全丢（不太可能，防一手）：沿用上一次的核占用
+            data.cpuCoreUsages = new ArrayList<>(lastCpuCoreUsages);
+        }
+
+        // 缓存本拍成功值，供「两路全空」的拍沿用
+        lastCpuTotalUsage = data.cpuTotalUsage;
+        lastCpuCoreUsages = new ArrayList<>(data.cpuCoreUsages);
+
+        collectCpuFreqMax(data);
+    }
+
+    /** /proc/stat 里一行 cpu 的累计时间（单位 jiffy）；slot=0 是整机，>0 是 cpu(slot-1) */
+    private static final class CpuRow {
+        long idle;
+        long total;
+    }
+
+    /**
+     * 本地直读 /proc/stat，按 CPU 号落位：[0]=整机、[N+1]=cpuN；打不开返回 null。
+     *
+     * 逐行 try/catch：认不出来的行只丢它自己，整机行和其它核行照样能用。
+     */
+    private CpuRow[] readCpuStatLocal() {
+        List<String> lines = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(Constants.Proc.STAT))) {
             String line;
-            int coreIndex = 0; // 0 is total, 1..n are cores cpu0..cpuN
+            boolean inCpuBlock = false;
             while ((line = br.readLine()) != null) {
-                if (line.startsWith("cpu")) {
-                    String[] tokens = line.trim().split("\\s+");
-                    if (tokens.length < 5) continue;
-
-                    long user = Long.parseLong(tokens[1]);
-                    long nice = Long.parseLong(tokens[2]);
-                    long system = Long.parseLong(tokens[3]);
-                    long idle = Long.parseLong(tokens[4]);
-                    long iowait = tokens.length > 5 ? Long.parseLong(tokens[5]) : 0;
-                    long irq = tokens.length > 6 ? Long.parseLong(tokens[6]) : 0;
-                    long softirq = tokens.length > 7 ? Long.parseLong(tokens[7]) : 0;
-
-                    long idleTime = idle + iowait;
-                    long totalTime = user + nice + system + idle + iowait + irq + softirq;
-
-                    if (coreIndex < 16) {
-                        long lastIdle = lastCpuTimes[coreIndex][0];
-                        long lastTotal = lastCpuTimes[coreIndex][1];
-
-                        long deltaIdle = idleTime - lastIdle;
-                        long deltaTotal = totalTime - lastTotal;
-
-                        float usage = 0f;
-                        if (deltaTotal > 0) {
-                            usage = (deltaTotal - deltaIdle) * 100f / deltaTotal;
-                        }
-
-                        if (coreIndex == 0) {
-                            data.cpuTotalUsage = usage;
-                        } else {
-                            data.cpuCoreUsages.add(usage);
-                        }
-
-                        lastCpuTimes[coreIndex][0] = idleTime;
-                        lastCpuTimes[coreIndex][1] = totalTime;
+                if (!line.startsWith("cpu")) {
+                    // 已经进过 cpu 段说明这一段读完了，后面的 intr/ctxt 不用再看
+                    if (inCpuBlock) {
+                        break;
                     }
-                    coreIndex++;
+                    continue;
+                }
+                inCpuBlock = true;
+                lines.add(line);
+                if (lines.size() >= CPU_SLOTS) {
+                    break;
                 }
             }
         } catch (Exception e) {
-            // Ignore or log
+            // SELinux 拒绝走这里；留注释别吞得无声无息
+            return null;
         }
+        return parseCpuStat(lines);
+    }
 
-        collectCpuFreqMax(data);
+    /** root shell 读同一份文件；RootShell 内部已做常驻与超时保护 */
+    private CpuRow[] readCpuStatViaRoot() {
+        if (rootReadUnusable) {
+            return null;
+        }
+        List<String> lines = RootShell.get().execLines(
+                "cat " + RootShell.quote(Constants.Proc.STAT), CPU_SLOTS, 1200L);
+        CpuRow[] rows = (lines == null || lines.isEmpty())
+                ? null : parseCpuStat(lines);
+        if (rows == null || rows[0] == null) {
+            rootMiss++;
+            // 连着几拍 root 也读不到就熔断，避免没授权 root 的机器每拍白拉 su
+            if (rootMiss >= CPU_ROOT_FALLBACK_TROUBLES * 2) {
+                rootReadUnusable = true;
+            }
+            return null;
+        }
+        rootMiss = 0;
+        return rows;
+    }
+
+    /**
+     * 本地一直读不到/没推进时，试着改走 root shell。
+     *
+     * @return true 表示已经切到 root 并且这一拍应该重新读一次
+     */
+    private boolean maybeFallBackToRoot() {
+        if (cpuViaRoot || rootReadUnusable
+                || cpuTrouble < CPU_ROOT_FALLBACK_TROUBLES) {
+            return false;
+        }
+        CpuRow[] test = readCpuStatViaRoot();
+        if (test == null || test[0] == null) {
+            return false;
+        }
+        cpuViaRoot = true;
+        cpuTrouble = 0;
+        // 换通道等于换了一个「读数来源」，旧基线必须作废：清零之后下一拍算的是
+        // 「开机至今」的均值，是个正常值
+        resetCpuBaseline();
+        LogUtils.i("NexusFloat cpuStat fallback -> root shell");
+        return true;
+    }
+
+    /** 把 CPU 基线和「上一次读数」清掉 */
+    private void resetCpuBaseline() {
+        for (int i = 0; i < CPU_SLOTS; i++) {
+            lastCpuTimes[i][0] = 0L;
+            lastCpuTimes[i][1] = 0L;
+            lastCpuUsage[i] = 0f;
+        }
+        lastCpuTotalUsage = 0f;
+    }
+
+    /**
+     * 某个槽位这一拍的占用（%），顺手把基线和「上一次读数」往前推。
+     *
+     * @return 0–100 的占用；两拍之间没有推进时返回上一次的结果
+     */
+    private float usageOf(int slot, CpuRow row) {
+        long dIdle = row.idle - lastCpuTimes[slot][0];
+        long dTotal = row.total - lastCpuTimes[slot][1];
+        lastCpuTimes[slot][0] = row.idle;
+        lastCpuTimes[slot][1] = row.total;
+        if (dTotal <= 0) {
+            return lastCpuUsage[slot];
+        }
+        float usage = (dTotal - dIdle) * 100f / dTotal;
+        lastCpuUsage[slot] = usage;
+        return usage;
+    }
+
+    /**
+     * 解析 cpu 行集合：整机行认 "cpu"，核行认 "cpuN" 并按 N 归位，行序无关。
+     * 返回 [0] 必须非 null 才算成功，否则返回 null。
+     */
+    private CpuRow[] parseCpuStat(List<String> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return null;
+        }
+        CpuRow[] rows = new CpuRow[CPU_SLOTS];
+        for (String line : lines) {
+            String[] tokens = line.trim().split("\\s+");
+            if (tokens.length < 5) {
+                continue;
+            }
+            String name = tokens[0];
+            int slot;
+            if (name.equals("cpu")) {
+                slot = 0;
+            } else if (name.startsWith("cpu")) {
+                try {
+                    slot = 1 + Integer.parseInt(name.substring(3));
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            if (slot < 0 || slot >= CPU_SLOTS) {
+                continue;
+            }
+            try {
+                long user = Long.parseLong(tokens[1]);
+                long nice = Long.parseLong(tokens[2]);
+                long system = Long.parseLong(tokens[3]);
+                long idle = Long.parseLong(tokens[4]);
+                long iowait = tokens.length > 5 ? Long.parseLong(tokens[5]) : 0;
+                long irq = tokens.length > 6 ? Long.parseLong(tokens[6]) : 0;
+                long softirq = tokens.length > 7 ? Long.parseLong(tokens[7]) : 0;
+
+                CpuRow row = new CpuRow();
+                row.idle = idle + iowait;
+                row.total = user + nice + system + idle + iowait + irq + softirq;
+                rows[slot] = row;
+            } catch (NumberFormatException e) {
+                // 单行解析失败只丢这一行
+                continue;
+            }
+        }
+        return rows[0] != null ? rows : null;
     }
 
     /** 读取各 policy / 各核 scaling_cur_freq，取当前最大值（MHz） */
