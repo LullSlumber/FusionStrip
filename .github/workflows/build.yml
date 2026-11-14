@@ -20,8 +20,10 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # runner 镜像自带 Android SDK，不用 setup-android（Ubuntu 26 上该 action 会挂）
+      # 只需把缺的 platform/build-tools 交给 AGP 自动下载前接受一遍 license
+      - name: Accept SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       # 仓库不带签名（keystore.properties 被 .gitignore 排除），CI 里现生成一套
       # 自签名密钥：装到手机上没问题，但和原作者的签名不同，覆盖安装前要先卸载
