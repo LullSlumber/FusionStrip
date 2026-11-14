@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # fork 仓库的 GITHUB_TOKEN 默认只读；挂 release 需要 contents 写权限
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
