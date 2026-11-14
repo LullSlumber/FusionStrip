@@ -44,7 +44,9 @@ public class MonitorView extends LinearLayout {
     private TextView clockIcon;
     private TextView clockText;
 
-    private TextView cpuIcon;
+    private TextView cpuName;
+    /** CPU 名称位的矢量图标：名称保持默认时显示它，自定义过名称就换回文字 */
+    private MonitorIconView cpuIconV;
     private MultiCoreBarView cpuBar;
     private TextView cpuFreqMinText;
     private TextView cpuFreqMaxText;
@@ -55,32 +57,40 @@ public class MonitorView extends LinearLayout {
     private TextView gpuLeftParentheses;
     private TextView gpuRightParentheses;
 
-    private TextView gpuIcon;
+    private TextView gpuName;
+    private MonitorIconView gpuIconV;
     private MultiCoreBarView gpuBar;
     private TextView gpuFreqText;
     private TextView gpuUsageText;
 
-    private TextView fpsIcon;
+    private TextView fpsName;
+    private MonitorIconView fpsIconV;
     private TextView fpsText;
 
-    private TextView ramIcon;
+    private TextView ramName;
+    private MonitorIconView ramIconV;
     private TextView ramText;
     private TextView zramIcon;
     private TextView zramText;
 
-    private TextView batTempIcon;
+    private TextView batTempName;
+    private MonitorIconView batTempIconV;
     private TextView batTempText;
-    private TextView batPowerIcon;
+    private TextView batPowerName;
+    private MonitorIconView batPowerIconV;
     private TextView batPowerText;
-    private TextView batCurrentIcon;
+    private TextView batCurrentName;
+    private MonitorIconView batCurrentIconV;
     private TextView batCurrentText;
 
     /** CPU 温度（v1.8.0）：走 thermal_zone，跟电池温度是两个独立模块 */
-    private TextView cpuTempIcon;
+    private TextView cpuTempName;
+    private MonitorIconView cpuTempIconV;
     private TextView cpuTempText;
 
     /** 网速（v1.8.14）：MB/s */
-    private TextView netIcon;
+    private TextView netName;
+    private MonitorIconView netIconV;
     private TextView netText;
 
     private PerformanceCollector collector;
@@ -105,6 +115,12 @@ public class MonitorView extends LinearLayout {
      * CPU频率 / GPU频率 的数值在父项括号里，没有名称位，所以是 null。
      */
     private final TextView[] nameViews = new TextView[Constants.Modules.COUNT];
+    /**
+     * 各模块名称位的矢量图标（v1.9.4-lull.2），下标同上。
+     * 只有九个指标模块有图标（时钟/ZRAM/频率子项没有），其余是 null。
+     * 名称保持默认时显示图标，自定义过名称就换回 nameViews 里的文字。
+     */
+    private final MonitorIconView[] iconViews = new MonitorIconView[Constants.Modules.COUNT];
     /** 各模块当前显示的名称，用来判断是不是真变了，免得白跑一次重新布局 */
     private final String[] moduleNames = Constants.Modules.DEFAULT_NAMES.clone();
     /** 「背景」开关现在是什么状态 */
@@ -212,7 +228,8 @@ public class MonitorView extends LinearLayout {
         // 立刻把时间填上：不然第一拍（最多 1 秒）之内是空白的
         updateClock();
 
-        cpuIcon = createIconView(context, Constants.Modules.IDX_CPU);
+        cpuIconV = createModuleIcon(context, Constants.Modules.IDX_CPU, MonitorIconView.ICON_CPU);
+        cpuName = createIconView(context, Constants.Modules.IDX_CPU);
         cpuBar = new MultiCoreBarView(context);
         setupBarView(cpuBar, dp2px(Constants.Ui.CPU_BAR_WIDTH_DP), dp2px(Constants.Ui.BAR_HEIGHT_DP));
         // 占用率列（v1.8.9）：固定 2 位数宽度 + 左对齐——两位留得下
@@ -225,7 +242,8 @@ public class MonitorView extends LinearLayout {
         cpuFreqMaxText = createValueTextView(context, Constants.Ui.PROBE_CPU_FREQ, Gravity.START);
         cpuRightParentheses = createParenthesesTextView(context,")");
 
-        gpuIcon = createIconView(context, Constants.Modules.IDX_GPU);
+        gpuIconV = createModuleIcon(context, Constants.Modules.IDX_GPU, MonitorIconView.ICON_GPU);
+        gpuName = createIconView(context, Constants.Modules.IDX_GPU);
         gpuBar = new MultiCoreBarView(context);
         setupBarView(gpuBar, dp2px(Constants.Ui.GPU_BAR_WIDTH_DP), dp2px(Constants.Ui.BAR_HEIGHT_DP));
         // 占用率列（v1.8.9）：固定 2 位数宽度 + 左对齐，理由同 cpuUsageText
@@ -234,22 +252,27 @@ public class MonitorView extends LinearLayout {
         gpuFreqText = createValueTextView(context, Constants.Ui.PROBE_GPU, Gravity.START);
         gpuRightParentheses = createParenthesesTextView(context,")");
 
-        ramIcon = createIconView(context, Constants.Modules.IDX_RAM);
+        ramIconV = createModuleIcon(context, Constants.Modules.IDX_RAM, MonitorIconView.ICON_RAM);
+        ramName = createIconView(context, Constants.Modules.IDX_RAM);
         ramText = createValueTextView(context, Constants.Ui.PROBE_PCT, Gravity.START);
         zramIcon = createIconView(context, Constants.Modules.IDX_ZRAM);
         zramText = createValueTextView(context, Constants.Ui.PROBE_PCT, Gravity.START);
 
-        batTempIcon = createIconView(context, Constants.Modules.IDX_TEMP);
+        batTempIconV = createModuleIcon(context, Constants.Modules.IDX_TEMP, MonitorIconView.ICON_TEMP);
+        batTempName = createIconView(context, Constants.Modules.IDX_TEMP);
         batTempText = createValueTextView(context, Constants.Ui.PROBE_TEMP, Gravity.START);
-        batPowerIcon = createIconView(context, Constants.Modules.IDX_POWER);
+        batPowerIconV = createModuleIcon(context, Constants.Modules.IDX_POWER, MonitorIconView.ICON_POWER);
+        batPowerName = createIconView(context, Constants.Modules.IDX_POWER);
         // 功率和电流左对齐：这两项的值带 +/- 号，而 Gravity.CENTER 会把
         // 「值比探针短」的那点余量平分到左右两边，于是符号前面凭空多出半格空白。
         // 左对齐之后符号紧贴名称，余量统一落在右侧，项目间隔仍归分隔条管
         batPowerText = createValueTextView(context, Constants.Ui.PROBE_POWER, Gravity.START);
-        batCurrentIcon = createIconView(context, Constants.Modules.IDX_CURRENT);
+        batCurrentIconV = createModuleIcon(context, Constants.Modules.IDX_CURRENT, MonitorIconView.ICON_CURRENT);
+        batCurrentName = createIconView(context, Constants.Modules.IDX_CURRENT);
         batCurrentText = createValueTextView(context, Constants.Ui.PROBE_CURRENT, Gravity.START);
 
-        fpsIcon = createIconView(context, Constants.Modules.IDX_FPS);
+        fpsIconV = createModuleIcon(context, Constants.Modules.IDX_FPS, MonitorIconView.ICON_FPS);
+        fpsName = createIconView(context, Constants.Modules.IDX_FPS);
         // FPS 列左对齐（v1.8.5）：数值从列左边开始，紧贴名称位的冒号；
         // 个位数时也从最左排起，自动「前进一格」贴住冒号，不再因为居中留空
         fpsText = createValueTextView(context, Constants.Ui.PROBE_FPS, Gravity.START);
@@ -257,25 +280,27 @@ public class MonitorView extends LinearLayout {
         fpsColumn = valueColumns.get(valueColumns.size() - 1);
 
         // CPU 温度（v1.8.0）：独立于电池温度，默认排在最后
-        cpuTempIcon = createIconView(context, Constants.Modules.IDX_CPU_TEMP);
+        cpuTempIconV = createModuleIcon(context, Constants.Modules.IDX_CPU_TEMP, MonitorIconView.ICON_CPU_TEMP);
+        cpuTempName = createIconView(context, Constants.Modules.IDX_CPU_TEMP);
         cpuTempText = createValueTextView(context, Constants.Ui.PROBE_CPU_TEMP, Gravity.START);
 
         // 网速（v1.8.14）：左对齐，数值带单位 MB/s
-        netIcon = createIconView(context, Constants.Modules.IDX_NET);
+        netIconV = createModuleIcon(context, Constants.Modules.IDX_NET, MonitorIconView.ICON_NET);
+        netName = createIconView(context, Constants.Modules.IDX_NET);
         netText = createValueTextView(context, Constants.Ui.PROBE_NET, Gravity.START);
 
         // 各模块先按默认顺序加进布局；用户改过顺序的话由 setModuleOrder 重排
-        View clockDivider = addTextOnlyRow(clockIcon, clockText);
+        View clockDivider = addTextOnlyRow(null, clockIcon, clockText);
         View cpuDivider = addCpuRow();
         View gpuDivider = addGpuRow();
-        View ramDivider = addTextOnlyRow(ramIcon, ramText);
-        View zramDivider = addTextOnlyRow(zramIcon, zramText);
-        View tempDivider = addTextOnlyRow(batTempIcon, batTempText);
-        View powerDivider = addTextOnlyRow(batPowerIcon, batPowerText);
-        View currentDivider = addTextOnlyRow(batCurrentIcon, batCurrentText);
-        View fpsDivider = addTextOnlyRow(fpsIcon, fpsText);
-        View cpuTempDivider = addTextOnlyRow(cpuTempIcon, cpuTempText);
-        View netDivider = addTextOnlyRow(netIcon, netText);
+        View ramDivider = addTextOnlyRow(ramIconV, ramName, ramText);
+        View zramDivider = addTextOnlyRow(null, zramIcon, zramText);
+        View tempDivider = addTextOnlyRow(batTempIconV, batTempName, batTempText);
+        View powerDivider = addTextOnlyRow(batPowerIconV, batPowerName, batPowerText);
+        View currentDivider = addTextOnlyRow(batCurrentIconV, batCurrentName, batCurrentText);
+        View fpsDivider = addTextOnlyRow(fpsIconV, fpsName, fpsText);
+        View cpuTempDivider = addTextOnlyRow(cpuTempIconV, cpuTempName, cpuTempText);
+        View netDivider = addTextOnlyRow(netIconV, netName, netText);
 
         groups = new Group[Constants.Modules.COUNT];
         // 分隔条归到父模块里：关掉「CPU频率」只去掉括号里的频率，模块间距保持不变
@@ -285,25 +310,27 @@ public class MonitorView extends LinearLayout {
         // 但还得占个位：applyModuleVisibility 按下标遍历 groups，null 会被跳过
         groups[Constants.Modules.IDX_CLOCK_24H] = subGroup();
         groups[Constants.Modules.IDX_CPU] =
-                topGroup(cpuDivider, cpuIcon, cpuBar, cpuUsageText);
+                topGroup(cpuDivider, cpuIconV, cpuName, cpuBar, cpuUsageText);
         groups[Constants.Modules.IDX_CPU_FREQ] =
                 subGroup(cpuLeftParentheses, cpuFreqMinText, cpuTextView, cpuFreqMaxText, cpuRightParentheses);
         groups[Constants.Modules.IDX_GPU] =
-                topGroup(gpuDivider, gpuIcon, gpuBar, gpuUsageText);
+                topGroup(gpuDivider, gpuIconV, gpuName, gpuBar, gpuUsageText);
         groups[Constants.Modules.IDX_GPU_FREQ] =
                 subGroup(gpuLeftParentheses, gpuFreqText, gpuRightParentheses);
-        groups[Constants.Modules.IDX_RAM] = topGroup(ramDivider, ramIcon, ramText);
+        groups[Constants.Modules.IDX_RAM] = topGroup(ramDivider, ramIconV, ramName, ramText);
         groups[Constants.Modules.IDX_ZRAM] = topGroup(zramDivider, zramIcon, zramText);
-        groups[Constants.Modules.IDX_TEMP] = topGroup(tempDivider, batTempIcon, batTempText);
-        groups[Constants.Modules.IDX_POWER] = topGroup(powerDivider, batPowerIcon, batPowerText);
+        groups[Constants.Modules.IDX_TEMP] = topGroup(tempDivider, batTempIconV, batTempName, batTempText);
+        groups[Constants.Modules.IDX_POWER] =
+                topGroup(powerDivider, batPowerIconV, batPowerName, batPowerText);
         groups[Constants.Modules.IDX_CURRENT] =
-                topGroup(currentDivider, batCurrentIcon, batCurrentText);
-        groups[Constants.Modules.IDX_FPS] = topGroup(fpsDivider, fpsIcon, fpsText);
+                topGroup(currentDivider, batCurrentIconV, batCurrentName, batCurrentText);
+        groups[Constants.Modules.IDX_FPS] = topGroup(fpsDivider, fpsIconV, fpsName, fpsText);
         groups[Constants.Modules.IDX_CPU_TEMP] =
-                topGroup(cpuTempDivider, cpuTempIcon, cpuTempText);
+                topGroup(cpuTempDivider, cpuTempIconV, cpuTempName, cpuTempText);
         groups[Constants.Modules.IDX_NET] =
-                topGroup(netDivider, netIcon, netText);
+                topGroup(netDivider, netIconV, netName, netText);
 
+        applyIconSizes();
         applyModuleVisibility();
         applyBackground();
         applyTintColor();
@@ -329,7 +356,8 @@ public class MonitorView extends LinearLayout {
      * 返回本行末尾那个分隔条。
      */
     private View addCpuRow() {
-        addView(cpuIcon);
+        addView(cpuIconV);
+        addView(cpuName);
         addView(cpuBar);
         addView(cpuUsageText);
         addView(cpuLeftParentheses);
@@ -341,7 +369,8 @@ public class MonitorView extends LinearLayout {
     }
 
     private View addGpuRow() {
-        addView(gpuIcon);
+        addView(gpuIconV);
+        addView(gpuName);
         addView(gpuBar);
         addView(gpuUsageText);
         addView(gpuLeftParentheses);
@@ -350,8 +379,14 @@ public class MonitorView extends LinearLayout {
         return addDivider();
     }
 
-    private View addTextOnlyRow(View icon, View text) {
-        addView(icon);
+    /**
+     * 纯文字行：图标（可为 null，时钟/ZRAM 没有矢量图标）→ 名称位 → 数值。
+     */
+    private View addTextOnlyRow(MonitorIconView icon, TextView name, TextView text) {
+        if (icon != null) {
+            addView(icon);
+        }
+        addView(name);
         addView(text);
         return addDivider();
     }
@@ -550,6 +585,12 @@ public class MonitorView extends LinearLayout {
             allTexts.get(i).setTypeface(Typeface.MONOSPACE,
                     fontBold ? Typeface.BOLD : Typeface.NORMAL);
         }
+        // 图标线条粗细跟字体加粗联动：加粗 2.25 / 常规 2（24 视口单位）
+        for (int i = 0; i < iconViews.length; i++) {
+            if (iconViews[i] != null) {
+                iconViews[i].setIconBold(fontBold);
+            }
+        }
         requestLayout();
         return true;
     }
@@ -656,10 +697,25 @@ public class MonitorView extends LinearLayout {
     }
 
     /**
-     * 把名称写进对应的 TextView。
+     * 建一个模块的矢量图标（v1.9.4-lull.2），登记到 iconViews 里，
+     * 尺寸由 applyIconSizes 按当前字号统一设定。
+     */
+    private MonitorIconView createModuleIcon(Context context, int moduleIndex, int iconType) {
+        MonitorIconView v = new MonitorIconView(context, iconType);
+        iconViews[moduleIndex] = v;
+        return v;
+    }
+
+    /**
+     * 把名称写进对应的 TextView，并按名称状态切换「图标 / 文字」显示。
      *
-     * 名称后面补个冒号当跟数值的分隔；名称为空串（用户特意清空的）时整个名称位藏掉，
-     * 只留数值，这时候再补冒号就成孤零零一个冒号了。
+     * 名称保持默认 → 藏文字、显示图标（图标颜色尺寸跟文字同源，观感一致）；
+     * 名称被用户自定义 → 藏图标、显示「名称:」文字，自定义能力不丢；
+     * 名称为空串（用户特意清空的）→ 两者都藏，只留数值。
+     *
+     * 注意：模块关掉时的整组隐藏由 applyModuleVisibility 统一压 GONE，
+     * 这里只负责在「模块可见」的前提下放开该放开的那一个——被组放开之后
+     * 多余的那个会在 applyModuleVisibility 的收尾阶段再压回去。
      */
     @SuppressLint("SetTextI18n")
     private void applyName(int moduleIndex, String name) {
@@ -668,15 +724,26 @@ public class MonitorView extends LinearLayout {
             return;
         }
         moduleNames[moduleIndex] = name;
+        MonitorIconView icon = iconViews[moduleIndex];
+        boolean useIcon = icon != null && name.equals(Constants.Modules.DEFAULT_NAMES[moduleIndex]);
         if (name.isEmpty()) {
             tv.setText("");
             // 用 GONE 不用空文本：空 TextView 照样占着左右内边距和一点宽度
             tv.setVisibility(View.GONE);
+            if (icon != null) {
+                icon.setVisibility(View.GONE);
+            }
+        } else if (useIcon) {
+            tv.setText("");
+            tv.setVisibility(View.GONE);
+            // 最终可见性由 applyModuleVisibility 按开关状态定，这里只负责放开
+            icon.setVisibility(View.VISIBLE);
         } else {
             tv.setText(name + ":");
-            // 最终可见性由 applyModuleVisibility 按开关状态定，这里只负责把
-            // 「名称非空」这一维放开，免得清空之后再填上时 View 还留在 GONE
             tv.setVisibility(View.VISIBLE);
+            if (icon != null) {
+                icon.setVisibility(View.GONE);
+            }
         }
     }
 
@@ -775,6 +842,42 @@ public class MonitorView extends LinearLayout {
         // 用户要求两者之间不留空隙。左侧保留 margin 跟名称位隔开
         params.rightMargin = 0;
         bar.setLayoutParams(params);
+    }
+
+    /** sp → px（跟随系统字体缩放，跟 TextView.setTextSize(COMPLEX_UNIT_SP) 同基准） */
+    private float sp2px(float sp) {
+        return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sp,
+                getContext().getResources().getDisplayMetrics());
+    }
+
+    /**
+     * 按当前字号统一设定各模块图标的尺寸、与右侧内容的间距、GPU 图标的下沉量。
+     *
+     * 尺寸 = 字号 × {@link MonitorIconView#SIZE_SCALE}，最小
+     * {@link MonitorIconView#MIN_SIZE_DP} dp 保底——字号拉到下限时图标不至于糊掉。
+     * 图标跟数值 TextView 同在一条水平 LinearLayout 里垂直居中，字号变了这边重算
+     * 尺寸、行高跟着变，中心线对齐关系不会错位。init 时和字号变化时都会调。
+     */
+    private void applyIconSizes() {
+        float sp = fontSizeSp * MonitorIconView.SIZE_SCALE;
+        int px = Math.max((int) (sp2px(sp) + 0.5f), dp2px(MonitorIconView.MIN_SIZE_DP));
+        int gap = dp2px(2f * fontScale());
+        for (int i = 0; i < iconViews.length; i++) {
+            MonitorIconView v = iconViews[i];
+            if (v == null) {
+                continue;
+            }
+            v.setIconSizePx(px);
+            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) v.getLayoutParams();
+            lp.rightMargin = gap;
+            v.setLayoutParams(lp);
+            // GPU 图标微沉一点跟柱状图、数值的视觉重心齐平；其余居中
+            float sink = i == Constants.Modules.IDX_GPU
+                    ? sp2px(fontSizeSp * MonitorIconView.SINK_SCALE) : 0f;
+            if (v.getTranslationY() != sink) {
+                v.setTranslationY(sink);
+            }
+        }
     }
 
     private View addDivider() {
@@ -951,6 +1054,8 @@ public class MonitorView extends LinearLayout {
                 dp2px(Constants.Ui.BAR_HEIGHT_DP * scale));
         setupBarView(gpuBar, dp2px(Constants.Ui.GPU_BAR_WIDTH_DP * scale),
                 dp2px(Constants.Ui.BAR_HEIGHT_DP * scale));
+        // 图标跟字号等比缩放（字号 × 1.1），GPU 图标的下沉量也按比例重算
+        applyIconSizes();
 
         // 空格自定义的宽度跟着字号缩放（v1.8.6）
         applySpaceBefore();
@@ -1034,10 +1139,29 @@ public class MonitorView extends LinearLayout {
             boolean visible = isEffectivelyEnabled(i);
             effective[i] = visible;
             applyGroupVisibility(groups[i], visible);
-            // 名称被用户清空的模块只显示数值：上面按组放开可见性时会把
-            // 名称位一起放出来，这里再压回去
-            if (visible && nameViews[i] != null && moduleNames[i].isEmpty()) {
-                nameViews[i].setVisibility(View.GONE);
+            // 名称位按名称状态再压一次（上面按组放开时把图标和文字都放出来了）：
+            // 默认名称 → 显示图标、藏文字；自定义 → 显示文字、藏图标；
+            // 清空 → 两个都藏。模块本身不可见时整组已经是 GONE，不用再动
+            if (visible && nameViews[i] != null) {
+                MonitorIconView icon = iconViews[i];
+                boolean useIcon = icon != null
+                        && moduleNames[i].equals(Constants.Modules.DEFAULT_NAMES[i]);
+                if (moduleNames[i].isEmpty()) {
+                    nameViews[i].setVisibility(View.GONE);
+                    if (icon != null) {
+                        icon.setVisibility(View.GONE);
+                    }
+                } else if (useIcon) {
+                    nameViews[i].setVisibility(View.GONE);
+                    if (icon != null) {
+                        icon.setVisibility(View.VISIBLE);
+                    }
+                } else {
+                    nameViews[i].setVisibility(View.VISIBLE);
+                    if (icon != null) {
+                        icon.setVisibility(View.GONE);
+                    }
+                }
             }
             // 只有顶层模块带分隔条，记下最后一个可见的
             if (visible && groups[i] != null && groups[i].divider != null) {
@@ -1234,6 +1358,12 @@ public class MonitorView extends LinearLayout {
 
         for (int i = 0; i < allTexts.size(); i++) {
             allTexts.get(i).setTextColor(t);
+        }
+        // 图标颜色直取文字色：反色 / 换色时图标跟着一起变
+        for (int i = 0; i < iconViews.length; i++) {
+            if (iconViews[i] != null) {
+                iconViews[i].setIconColor(t);
+            }
         }
     }
 
