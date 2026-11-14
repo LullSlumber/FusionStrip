@@ -43,7 +43,8 @@ jobs:
           EOF
 
       - name: Build release APK
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        # 仓库里 gradlew 没有可执行位（作者在 Windows 提交），用 bash 显式调用绕开
+        run: bash gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Rename APK
         run: |
