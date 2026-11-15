@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import com.droiddeck.launcher.hud.DroidDeckHudConfig
 import com.droiddeck.launcher.hud.DroidDeckHudSize
 import com.droiddeck.launcher.session.SessionPrefs
+import com.jj.nexusfloat.collector.GpuCollectorWorker
 import com.jj.nexusfloat.constant.Constants
 import com.jj.nexusfloat.hud.FusionStripView
 import com.jj.nexusfloat.service.GpuCollectorLauncher
@@ -114,7 +116,6 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         HeaderCard()
-                        MasterSwitchCard()
                         HudRenderCard()
                         MetricsCard()
                         AccentLineCard()
