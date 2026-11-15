@@ -76,7 +76,9 @@ public class MultiCoreBarView extends View {
             fillHeight = Math.max(0, Math.min(fillHeight, height));
             float topY = height - fillHeight;
 
-            int colorNormal = Constants.Ui.COLOR_BAR_NORMAL;
+            // v1.9.4-lull.5：填充色跟文字色同步（tintColor 由 MonitorView 按
+            // 文字颜色 / 自动反色驱动）；高负载红色警示保留，纯功能提示
+            int colorNormal = tintColor;
             int colorHigh = Constants.Ui.COLOR_BAR_HIGH;
             paint.setColor(usage >= Constants.Ui.BAR_HIGH_USAGE_THRESHOLD ? colorHigh : colorNormal);
             canvas.drawRect(currentX, topY, currentX + barWidth, height, paint);

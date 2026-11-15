@@ -843,9 +843,9 @@ public class MonitorView extends LinearLayout {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(width, height);
         int margin = dp2px(Constants.Ui.BAR_HORIZONTAL_MARGIN_DP * fontScale());
         params.leftMargin = margin;
-        // v1.8.0：右侧 margin 归零——柱条后面紧跟的就是占用率数值，
-        // 用户要求两者之间不留空隙。左侧保留 margin 跟名称位隔开
-        params.rightMargin = 0;
+        // v1.9.4-lull.5：柱条右侧和数值之间留一小段空隙（跟图标→柱条的间距一致），
+        // 原版是 0 紧贴，跟效果图对比显得数字糊在柱条上
+        params.rightMargin = dp2px(2f * fontScale());
         bar.setLayoutParams(params);
     }
 
