@@ -1,6 +1,7 @@
 # FusionStrip
 
 > 基于 [NexusFloat](https://github.com/YeLuoYuXiang/NexusFloat)（酷安@叶落雨巷，GPLv3）的分支：UI 按 Material You 重设计、加入强调线等自定义。上游的全部能力与致谢保留，见下方原文。
+> 已实装：MD3 种子色/动态取色、强调线、HUD 尺寸切换。
 
 酷安@叶落雨巷
 

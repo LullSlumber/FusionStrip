@@ -329,6 +329,16 @@ public final class NexusBridge {
         return readInt(Constants.Modules.KEY_HUD_OPACITY, 88);
     }
 
+    /** 「总开关」：默认开。 */
+    public static boolean isHudEnabled() {
+        return readBool(Constants.Modules.KEY_HUD_ENABLED, true);
+    }
+
+    /** DroidDeck 渲染配置整包 JSON；未发布时返回 null（渲染层用默认配置）。 */
+    public static String getDroidDeckCfg() {
+        return readString(Constants.Modules.KEY_DROIDDECK_CFG, null);
+    }
+
     /**
      * CPU 柱状图开关；默认开。
      *

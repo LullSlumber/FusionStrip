@@ -213,6 +213,22 @@ class FusionStripView(context: Context) : FrameLayout(context) {
         apply(values)
     }
 
+    /**
+     * DroidDeck 渲染配置整包同步：App 端把整个 DroidDeckHudConfig 编码后经
+     * SettingsChannel 推过来，这里直接 applyConfig（尺寸/项目/透明度全在里面）。
+     * 旧的三层同步键（moduleFlags 翻译层）已废弃。
+     */
+    private var lastCfg: String? = null
+    fun setDroidDeckCfg(json: String?) {
+        if (json == lastCfg) return
+        lastCfg = json
+        if (json.isNullOrEmpty()) {
+            applyDefaultConfig()
+        } else {
+            hudView.applyConfig(json)
+        }
+    }
+
     /** 强调线：DroidDeck 渲染本体无线元件，由包装层 onDraw 画在底边（贴游戏一侧）。 */
     private var stripLineEnabled = true
     private var stripLineColor = 0xFFFFB74D.toInt()

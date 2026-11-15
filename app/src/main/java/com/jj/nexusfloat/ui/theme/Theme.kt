@@ -1,13 +1,18 @@
 package com.jj.nexusfloat.ui.theme
 
+import android.os.Build
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * 一套配色。深色浅色各实例化一份，字段一一对应。
@@ -154,6 +159,9 @@ private fun scheme(c: NexusColors) = if (c.isDark) {
         onPrimary = c.onPrimary,
         primaryContainer = c.primaryContainer,
         onPrimaryContainer = c.onPrimaryContainer,
+        // SectionCard 标题 tile 用 secondary-container 作底；整套配色没有独立的
+        // secondary 概念，就映射到 primaryContainer，跟随主题而不是落到基线紫色
+        secondaryContainer = c.primaryContainer,
         background = c.surface,
         onBackground = c.onSurface,
         surface = c.cardSurface,
@@ -169,6 +177,7 @@ private fun scheme(c: NexusColors) = if (c.isDark) {
         onPrimary = c.onPrimary,
         primaryContainer = c.primaryContainer,
         onPrimaryContainer = c.onPrimaryContainer,
+        secondaryContainer = c.primaryContainer,
         background = c.surface,
         onBackground = c.onSurface,
         surface = c.cardSurface,
@@ -181,19 +190,60 @@ private fun scheme(c: NexusColors) = if (c.isDark) {
 }
 
 /**
+ * Material You 动态取色（Android 12+）：把 dynamicDark/LightColorScheme 出来的
+ * 官方取色映射回 NexusColors 字段，优先级高于种子色（见 [NexusFloatTheme]）。
+ *
+ * 连接状态色不用系统的：红绿语义色固定写死，跟种子色方案（[nexusColorsForSeed]）
+ * 的做法一致，避免某些壁纸取出来红绿不分。
+ */
+private fun nexusColorsFromDynamic(scheme: ColorScheme, isDark: Boolean): NexusColors =
+    NexusColors(
+        primary = scheme.primary,
+        onPrimary = scheme.onPrimary,
+        primaryContainer = scheme.primaryContainer,
+        onPrimaryContainer = scheme.onPrimaryContainer,
+        surface = scheme.surface,
+        cardSurface = scheme.surfaceContainer,
+        onSurface = scheme.onSurface,
+        onSurfaceVariant = scheme.onSurfaceVariant,
+        cardStroke = scheme.outlineVariant,
+        statusConnected = if (isDark) Color(0xFF5EEAD4) else Color(0xFF007A63),
+        statusConnectedBg = if (isDark) Color(0xFF133E2B) else Color(0xFFD3F0E0),
+        statusDisconnected = if (isDark) Color(0xFFFFB4AB) else Color(0xFFB3261E),
+        statusDisconnectedBg = if (isDark) Color(0xFF4A1515) else Color(0xFFFADAD7),
+        toggleOnContainer = scheme.secondaryContainer,
+        toggleOnBorder = scheme.primary,
+        toggleOffContainer = scheme.surfaceContainerLow,
+        subItemGuide = scheme.outlineVariant,
+        isDark = isDark
+    )
+
+/**
  * darkTheme 决定用深色还是浅色。调用方按「浅色 / 深色 / 跟随系统」的设置算好传进来，
  * 跟随系统的话就传 `isSystemInDarkTheme()`。
  *
  * seedHue：MD3 tonal 动态色的种子色相（0-359，见 [nexusColorsForSeed]）；
  * 传 -1（默认）时保持钴蓝手写配色不变，向后兼容。
+ *
+ * dynamicColor：Material You 动态取色（Android 12+），开了就用系统壁纸取色，
+ * 优先级高于 seedHue；低版本或传 false 时忽略。
  */
 @Composable
 fun NexusFloatTheme(
     darkTheme: Boolean = true,
     seedHue: Int = -1,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colors = when {
+        dynamicColor && Build.VERSION.SDK_INT >= 31 -> {
+            val context = LocalContext.current
+            if (darkTheme) {
+                nexusColorsFromDynamic(dynamicDarkColorScheme(context), true)
+            } else {
+                nexusColorsFromDynamic(dynamicLightColorScheme(context), false)
+            }
+        }
         seedHue >= 0 -> nexusColorsForSeed(seedHue, darkTheme)
         darkTheme -> DarkColors
         else -> LightColors

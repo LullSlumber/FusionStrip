@@ -351,37 +351,14 @@ public final class MonitorOverlay {
         // Settings.Global 通道：system uid 直接读，很轻，每轮都刷得起
         SettingsChannel.refresh(context);
 
-        boolean changed = monitorView.setModuleEnabled(NexusBridge.readModuleFlags());
-        changed |= monitorView.setModuleNames(NexusBridge.readModuleNames());
-        changed |= monitorView.setModuleOrder(NexusBridge.readModuleOrder());
-        changed |= monitorView.setSpacesBefore(
-                NexusBridge.readSpaceBefore());
-        changed |= monitorView.setBackgroundEnabled(NexusBridge.isBackgroundEnabled());
-        changed |= monitorView.setFpsDebugEnabled(NexusBridge.isFpsDebugEnabled());
-        changed |= monitorView.setSpacingDp(NexusBridge.getSpacingDp());
-        changed |= monitorView.setBarsEnabled(
-                NexusBridge.isCpuBarEnabled(), NexusBridge.isGpuBarEnabled());
-        // 12/24 小时制只改文字格式，列宽是按最宽的情形定死的，不影响尺寸
-        monitorView.setClock24h(NexusBridge.isClock24h());
-        // 字体颜色和自动反色都只换颜色不改尺寸，所以不算进 changed。
-        // 先设颜色再设反色：后者会按需覆盖前者，顺序反了就用了上一次的颜色
-        monitorView.setTextColorIndex(NexusBridge.getTextColorIndex());
-        monitorView.setAutoContrastEnabled(NexusBridge.isAutoContrastEnabled());
+        // DroidDeck 渲染配置整包（尺寸/不透明度/读数项目全在里面）
+        monitorView.setDroidDeckCfg(NexusBridge.getDroidDeckCfg());
         // 强调线：开关与颜色都只影响重绘，不改布局
         monitorView.setStripLineColorIndex(NexusBridge.getStripLineColorIndex());
         monitorView.setStripLineEnabled(NexusBridge.isStripLineEnabled());
-        // HUD 尺寸（可能重排）与不透明度（只重绘）
-        changed |= monitorView.setHudSize(NexusBridge.getHudSize());
-        monitorView.setHudOpacity(NexusBridge.getHudOpacity());
         // 采集周期：collector 每轮重读，不影响布局
         monitorView.setIntervalMs(NexusBridge.getUpdateIntervalMs());
-        boolean fontChanged = monitorView.setFontSizeSp(NexusBridge.getFontSizeSp());
-        changed |= fontChanged;
-        changed |= monitorView.setFontBold(NexusBridge.isFontBold());
-        // 位置偏移改的是窗口参数不是 View 内容，所以单独判断——它不需要重新测量，
-        // 但同样得 updateViewLayout 才会生效
-        changed |= applyOffset();
-        if (changed && attached && params != null && windowManager != null) {
+        if (attached && params != null && windowManager != null) {
             // 窗口宽高都是 WRAP_CONTENT，内容变了得 updateViewLayout 才会重新测量
             try {
                 windowManager.updateViewLayout(content, params);
@@ -422,6 +399,10 @@ public final class MonitorOverlay {
      * （v1.8.14）。
      */
     private boolean shouldShowNow() {
+        // 总开关：App 里关掉后横条整体隐藏、采集一并停掉
+        if (!NexusBridge.isHudEnabled()) {
+            return false;
+        }
         // 息屏（灭屏/锁屏）判定：没开「息屏显示」就直接隐藏，
         // 隐藏会一并把采集停掉，省电。开屏状态用 isInteractive 现取，
         // 广播只负责提前触发一次评估，两者不冲突

@@ -689,12 +689,22 @@ public final class Constants {
         public static final int APP_THEME_SYSTEM = 0;
         /** App 界面强调色种子（UiSeeds.ORDER 里的 key，如 "blue"），只影响设置界面配色 */
         public static final String KEY_UI_SEED = "ui_seed";
+        /**
+         * 「动态取色」：Android 12+ 用系统 Material You 壁纸取色，优先级高于种子色。
+         * 只影响 App 自己的设置界面，跟 KEY_APP_THEME 一样存本地即可。
+         */
+        public static final String KEY_UI_DYNAMIC_COLOR = "ui_dynamic_color";
         /** 「HUD 尺寸」：DroidDeckHudSize token（strip/full/...），渲染层直接消费 */
         public static final String KEY_HUD_SIZE = "hud_size";
         public static final String LABEL_HUD_SIZE = "HUD 尺寸";
         /** 「HUD 不透明度」：0-100，映射渲染层背景 alpha */
         public static final String KEY_HUD_OPACITY = "hud_opacity";
         public static final String LABEL_HUD_OPACITY = "HUD 不透明度";
+        /** 「总开关」：关掉后监视条整体隐藏、采集停止 */
+        public static final String KEY_HUD_ENABLED = "hud_enabled";
+        public static final String LABEL_HUD_ENABLED = "启用监视条";
+        /** DroidDeck 渲染配置整包 JSON（DroidDeckHudConfig.encode 格式） */
+        public static final String KEY_DROIDDECK_CFG = "droiddeck_cfg";
         public static final int APP_THEME_LIGHT = 1;
         public static final int APP_THEME_DARK = 2;
         /** 三个选项的按钮文字，下标就是取值 */
