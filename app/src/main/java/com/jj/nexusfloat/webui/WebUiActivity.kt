@@ -38,6 +38,10 @@ class WebUiActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var bridge: NFPrefsBridge
 
+    /** 最近一次收到的系统栏 insets，页面加载完成后要补发（首派发时页面 JS 还没跑起来） */
+    private var pendingTop = 0
+    private var pendingBottom = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -68,6 +72,12 @@ class WebUiActivity : Activity() {
                     // 绝不能让页面跳到任意外链后仍持有这个对象。
                     return request.url?.scheme != "file"
                 }
+
+                override fun onPageFinished(view: WebView, url: String?) {
+                    // 首次 insets 派发发生在首次 layout，那时页面脚本还没执行，
+                    // window.NFInsets 调用会落空 —— 页面就绪后必须补发一次。
+                    sendInsets(pendingTop, pendingBottom)
+                }
             }
         }
 
@@ -87,9 +97,9 @@ class WebUiActivity : Activity() {
                     @Suppress("DEPRECATION")
                     bottom = insets.systemWindowInsetBottom
                 }
-                webView.evaluateJavascript(
-                    "window.NFInsets&&NFInsets($top,$bottom)", null
-                )
+                pendingTop = top
+                pendingBottom = bottom
+                sendInsets(top, bottom)
                 insets
             }
             addView(
@@ -104,6 +114,13 @@ class WebUiActivity : Activity() {
         webView.loadUrl("file:///android_asset/webui/index.html")
 
         StatsService.startIfEnabled(this)
+    }
+
+    /** 把系统栏 insets 转发给页面（页面用它设置 CSS 变量给顶栏 / 底栏让位） */
+    private fun sendInsets(top: Int, bottom: Int) {
+        webView.evaluateJavascript(
+            "window.NFInsets&&NFInsets($top,$bottom)", null
+        )
     }
 
     /** 两张系统栏都改透明；API 29+ 顺手关掉系统的对比度遮罩 */
