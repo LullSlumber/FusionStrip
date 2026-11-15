@@ -145,8 +145,9 @@ class FusionStripView(context: Context) : FrameLayout(context) {
     }
 
     /** 柱条是 MonitorView 自绘的元件，DroidDeck STRIP 没有对应元件，忽略。 */
-    fun setBarsEnabled(cpuBar: Boolean, gpuBar: Boolean) {
+    fun setBarsEnabled(cpuBar: Boolean, gpuBar: Boolean): Boolean {
         // DroidDeck 主题无柱条元件，忽略
+        return false
     }
 
     /** DroidDeck 时钟行的制式由系统 DateFormat 决定，忽略。 */
@@ -155,13 +156,20 @@ class FusionStripView(context: Context) : FrameLayout(context) {
     }
 
     /** FPS 诊断标记是 NexusFloat 渲染层的概念，DroidDeck 无对应开关，忽略。 */
-    fun setFpsDebugEnabled(enabled: Boolean) {
+    fun setFpsDebugEnabled(enabled: Boolean): Boolean {
         // 诊断由 FpsSyncBridge/记录页承担，忽略
+        return false
     }
 
     /** 行间距由 DroidDeck STRIP 样式固定，忽略。 */
-    fun setSpacingDp(dp: Float) {
+    fun setSpacingDp(dp: Float): Boolean {
         // DroidDeck STRIP 样式固定，忽略
+        return false
+    }
+
+    /** 显示时机切换：横条隐藏时 DroidDeckHudView 的自采集循环随之停掉。 */
+    fun setCollecting(collecting: Boolean) {
+        hudView.visibility = if (collecting) android.view.View.VISIBLE else android.view.View.INVISIBLE
     }
 
     /** 采集周期在 PerformanceCollector 上生效（语义不变，只是不再改布局）。 */
@@ -182,17 +190,36 @@ class FusionStripView(context: Context) : FrameLayout(context) {
     }
 
     /** 模块间距是 NexusFloat 渲染层的概念，忽略。 */
-    fun setSpacesBefore(before: IntArray?) {
+    fun setSpacesBefore(before: IntArray?): Boolean {
         // DroidDeck STRIP 间距固定，忽略
     }
 
-    /** 强调线是 NexusFloat 渲染层的概念，忽略。 */
+    /** 强调线：DroidDeck 渲染本体无线元件，由包装层 onDraw 画在底边（贴游戏一侧）。 */
+    private var stripLineEnabled = true
+    private var stripLineColor = 0xFFFFB74D.toInt()
+    private val stripLinePaint = android.graphics.Paint()
+
     fun setStripLineEnabled(enabled: Boolean) {
-        // DroidDeck 无强调线元件，忽略
+        if (stripLineEnabled == enabled) return
+        stripLineEnabled = enabled
+        invalidate()
     }
 
     fun setStripLineColorIndex(index: Int) {
-        // DroidDeck 无强调线元件，忽略
+        val palette = com.jj.nexusfloat.constant.Constants.Ui.STRIP_LINE_COLORS
+        val color = if (index in palette.indices) palette[index] else palette[0]
+        if (stripLineColor == color) return
+        stripLineColor = color
+        stripLinePaint.color = color
+        invalidate()
+    }
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        if (!stripLineEnabled || width <= 0) return
+        val thickness = Math.max(2, Math.round(resources.displayMetrics.density * 1.5f))
+        val y = height - thickness.toFloat()
+        canvas.drawRect(0f, y, width.toFloat(), height.toFloat(), stripLinePaint)
     }
 
     /** 高度给退化模式（status_bar 子 View）与悬浮窗高度探测用。 */
