@@ -57,8 +57,10 @@ public final class MonitorIconView extends View {
             // ICON_CPU：cpu（芯片）
             {"R:4,4,16,16,2", "R:8,8,8,8,1",
                     "M12 20v2M12 2v2M17 20v2M17 2v2M2 12h2M2 17h2M2 7h2M20 12h2M20 17h2M20 7h2M7 20v2M7 2v2"},
-            // ICON_GPU：monitor（显示器）
-            {"R:2,3,20,14,2", "M8 21h8M12 17v4"},
+            // ICON_GPU：monitor（显示器）——原版 Lucide 字形屏幕矩形在 y3~17（中心
+            // y10）视觉重心偏上，图标看着"浮"；重画为屏幕 y6~18 居中（中心 y12，
+            // 与 CPU 芯片主体同重心）+ 短底线支架，不引入任何位移
+            {"R:2,6,20,12,2", "M8 20h8"},
             // ICON_RAM：memory-stick（内存条）
             {"R:2,6,20,10,2",
                     "M12 12v-2M12 18v-2M16 12v-2M16 18v-2M2 11h1.5M20 18v-2M20.5 11H22M4 18v-2M8 12v-2M8 18v-2"},
