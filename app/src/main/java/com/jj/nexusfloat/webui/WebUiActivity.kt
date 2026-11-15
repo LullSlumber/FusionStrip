@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -123,16 +124,16 @@ class WebUiActivity : Activity() {
      * 页面切浅色主题时把系统栏图标换成深色，不然白图标配浅背景看不见。
      * 深色主题（默认）传 false，保持白色图标。
      *
-     * 用平台 insetsController（API 30+）：androidx.core 的
-     * WindowInsetsControllerCompat 在当前依赖解析下 companion 常量不可见，
-     * 平台 API 语义一致且一加 13T（Android 15+）必然走这个分支。
+     * 用平台 insetsController（API 30+）：外观常量定义在
+     * android.view.WindowInsetsController 上（WindowInsets 只有嵌套的 Type 类），
+     * 平台 API 语义清晰，一加 13T（Android 15+）必然走这个分支。
      * 更老的设备跳过 —— 默认深色主题本来就配白色图标。
      */
     fun setSystemBarsLight(light: Boolean) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         val controller = window.insetsController ?: return
-        val mask = WindowInsets.APPEARANCE_LIGHT_STATUS_BARS or
-                WindowInsets.APPEARANCE_LIGHT_NAVIGATION_BARS
+        val mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
         controller.setSystemBarsAppearance(if (light) mask else 0, mask)
     }
 
