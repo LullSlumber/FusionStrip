@@ -1,6 +1,5 @@
 package com.jj.nexusfloat.webui
 
-import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -83,9 +82,9 @@ class NFPrefsBridge(private val context: Context) {
     private var pendingPublish: Runnable? = null
 
     /** WebUiActivity 弱引用：页面切浅色主题时要联动系统栏图标颜色 */
-    private var activityRef: WeakReference<Activity>? = null
+    private var activityRef: WeakReference<WebUiActivity>? = null
 
-    fun attachActivity(activity: Activity?) {
+    fun attachActivity(activity: WebUiActivity?) {
         activityRef = activity?.let { WeakReference(it) }
     }
 
