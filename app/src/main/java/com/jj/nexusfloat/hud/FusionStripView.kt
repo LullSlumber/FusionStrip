@@ -192,6 +192,7 @@ class FusionStripView(context: Context) : FrameLayout(context) {
     /** 模块间距是 NexusFloat 渲染层的概念，忽略。 */
     fun setSpacesBefore(before: IntArray?): Boolean {
         // DroidDeck STRIP 间距固定，忽略
+        return false
     }
 
     /** 强调线：DroidDeck 渲染本体无线元件，由包装层 onDraw 画在底边（贴游戏一侧）。 */
