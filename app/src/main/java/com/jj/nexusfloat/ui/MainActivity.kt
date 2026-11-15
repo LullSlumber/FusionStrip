@@ -40,8 +40,6 @@ import androidx.annotation.DrawableRes
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
-import com.jj.nexusfloat.stats.StatsRepository
-import com.jj.nexusfloat.stats.StatsService
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -91,15 +89,6 @@ class MainActivity : ComponentActivity() {
     /** 息屏时还显不显示监视条（v1.8.10），默认不显示 */
     private var showScreenOff by mutableStateOf(false)
 
-    // ---- 统计页 ----
-    /** 统计总开关，默认开：装了模块就是想看数据 */
-    private var statsEnabled by mutableStateOf(true)
-    /** 采样间隔（秒） */
-    private var statsIntervalSec by mutableStateOf(Constants.Stats.INTERVAL_DEFAULT_SEC)
-    /** 常驻通知开关 */
-    private var statsNotification by mutableStateOf(true)
-    /** 只在亮屏时记录 */
-    private var statsScreenOnOnly by mutableStateOf(false)
     /** 仅充电时显示（v1.8.14），默认关——不充电也照常显示 */
     private var showChargingOnly by mutableStateOf(false)
     /**
@@ -217,19 +206,6 @@ class MainActivity : ComponentActivity() {
             Constants.Modules.KEY_WAKE_INTERVAL,
             Constants.Modules.WAKE_INTERVAL_DEFAULT_SEC
         )
-        // 统计页四项设置。默认值跟 StatsService.startIfEnabled 保持一致：
-        // 那边默认开，这边要是默认关，界面显示的状态就和实际跑的对不上
-        statsEnabled = readSwitch(Constants.Stats.KEY_ENABLED, default = true)
-        statsIntervalSec = readInt(
-            Constants.Stats.KEY_INTERVAL_SEC,
-            Constants.Stats.INTERVAL_DEFAULT_SEC
-        ).coerceIn(Constants.Stats.INTERVAL_MIN_SEC, Constants.Stats.INTERVAL_MAX_SEC)
-        statsNotification = readSwitch(Constants.Stats.KEY_NOTIFICATION, default = true)
-        statsScreenOnOnly = readSwitch(Constants.Stats.KEY_SCREEN_ON_ONLY, default = false)
-        // 统计功能开着就确保采样服务在跑：用户可能是从桌面图标进来的
-        if (statsEnabled) {
-            StatsService.startIfEnabled(this)
-        }
         for (i in 0 until Constants.Modules.COUNT) {
             // 默认值取 DEFAULT_ENABLED（v1.8.11 起只默认开 CPU/GPU/功率/FPS），
             // 与 NexusBridge.readModuleFlags 保持一致，否则界面显示的开关状态
@@ -497,22 +473,6 @@ class MainActivity : ComponentActivity() {
                             xposedConnected = xposedConnected,
                             lastUpdateText = lastUpdateText,
                             versionName = versionName,
-                            statsEnabled = statsEnabled,
-                            onStatsEnabledChange = { applyStatsEnabled(it) },
-                            statsIntervalSec = statsIntervalSec,
-                            onStatsIntervalChange = { changeStatsInterval(it) },
-                            statsNotification = statsNotification,
-                            onStatsNotificationChange = { checked ->
-                                statsNotification = checked
-                                saveSwitch(Constants.Stats.KEY_NOTIFICATION, checked)
-                            },
-                            statsScreenOnOnly = statsScreenOnOnly,
-                            onStatsScreenOnOnlyChange = { checked ->
-                                statsScreenOnOnly = checked
-                                saveSwitch(Constants.Stats.KEY_SCREEN_ON_ONLY, checked)
-                            },
-                            onOpenUsageAccess = { openUsageAccessSettings() },
-                            onClearStats = { clearStats() }
                         )
                     }
                 }
@@ -543,84 +503,6 @@ class MainActivity : ComponentActivity() {
         Thread {
             val out = ExecUtils.exec("killall com.android.systemui || pkill -f com.android.systemui")
             LogUtils.i("Restart SystemUI result: $out")
-        }.start()
-    }
-
-    /**
-     * 应用统计总开关。
-     *
-     * 除了存设置，还要立刻让采样服务跟着启停：用户点完开关就该马上生效。
-     * 方法名不叫 setStatsEnabled——那样会跟 statsEnabled 属性自动生成的 setter
-     * 撞上同一个 JVM 签名，编译器报 platform declaration clash。
-     */
-    private fun applyStatsEnabled(enabled: Boolean) {
-        statsEnabled = enabled
-        saveSwitch(Constants.Stats.KEY_ENABLED, enabled)
-        if (enabled) {
-            StatsService.startIfEnabled(this)
-            Toast.makeText(this, "已开启统计，正在记录充电与使用情况", Toast.LENGTH_SHORT).show()
-        } else {
-            StatsService.stop(this)
-            Toast.makeText(this, "已停止统计，历史数据仍然保留", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    /**
-     * 调采样间隔。
-     *
-     * 夹到合法区间之后回写。采样循环每拍重读一次间隔，所以改完不用重启服务。
-     */
-    private fun changeStatsInterval(delta: Int) {
-        val next = (statsIntervalSec + delta * Constants.Stats.INTERVAL_STEP_SEC)
-            .coerceIn(Constants.Stats.INTERVAL_MIN_SEC, Constants.Stats.INTERVAL_MAX_SEC)
-        if (next == statsIntervalSec) {
-            Toast.makeText(
-                this,
-                if (delta > 0) "最长 ${Constants.Stats.INTERVAL_MAX_SEC} 秒"
-                else "最短 ${Constants.Stats.INTERVAL_MIN_SEC} 秒",
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        statsIntervalSec = next
-        saveInt(Constants.Stats.KEY_INTERVAL_SEC, next)
-    }
-
-    /**
-     * 跳系统「使用情况访问」设置页。
-     *
-     * 这个权限没有运行时申请接口，只能把用户送到设置页自己打开。直接 startActivity
-     * 可能抛 ActivityNotFoundException（部分精简 ROM 裁了这个页面），那就退回设置首页。
-     */
-    private fun openUsageAccessSettings() {
-        val direct = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-        direct.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            startActivity(direct)
-        } catch (e: Exception) {
-            LogUtils.w("open usage access settings failed, fallback to app details", e)
-            try {
-                startActivity(
-                    Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            } catch (e2: Exception) {
-                Toast.makeText(
-                    this,
-                    "打不开系统设置，请手动到「设置 → 应用 → 特殊权限」里授权",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    /** 清空统计数据。跑在后台线程，几千行删除不该卡住点按的那一下 */
-    private fun clearStats() {
-        Toast.makeText(this, "正在清空统计数据…", Toast.LENGTH_SHORT).show()
-        Thread {
-            StatsRepository.clearAll(applicationContext)
-            mainHandler.post {
-                Toast.makeText(this, "统计数据已清空", Toast.LENGTH_SHORT).show()
-            }
         }.start()
     }
 
@@ -1219,10 +1101,6 @@ class MainActivity : ComponentActivity() {
 private enum class MainTab(val title: String, val icon: String) {
     /** 运行状态 + 显示时机 + 维护 + 使用须知：打开 App 最先要确认的几件事 */
     STATUS("状态", "◉"),
-    /** 充电曲线 + 使用统计 + 设置：只读看板，跟「调开关」分开放 */
-    STATS("统计", "▤"),
-    /** 记录：设备信息 + 历史记录 + 悬浮球开关，一页看完 */
-    FRAMES("记录", "▢"),
     /** 监视项目 + 外观与校正：「显示什么」和「长什么样」搁一起才顺手 */
     MODULES("项目", "☰"),
     /** FPS 来源：六个开关加预设，独占一页 */
@@ -1301,28 +1179,11 @@ fun MainScreen(
     onSpaceBeforeCommit: (String) -> Unit,
     xposedConnected: Boolean,
     lastUpdateText: String,
-    versionName: String,
-    statsEnabled: Boolean,
-    onStatsEnabledChange: (Boolean) -> Unit,
-    statsIntervalSec: Int,
-    onStatsIntervalChange: (Int) -> Unit,
-    statsNotification: Boolean,
-    onStatsNotificationChange: (Boolean) -> Unit,
-    statsScreenOnOnly: Boolean,
-    onStatsScreenOnOnlyChange: (Boolean) -> Unit,
-    onOpenUsageAccess: () -> Unit,
-    onClearStats: () -> Unit
+    versionName: String
 ) {
     var tab by rememberSaveable { mutableStateOf(MainTab.STATUS) }
-    // 只用来响应「把统计页滚回顶部」：记录详情是统计页里就地替换内容的二级视图，
-    // 而滚动状态在这一层，所以得由这里代劳
-    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier) {
-        if (tab == MainTab.FRAMES) {
-            // 帧记录页自成一屏：它有自己固定的底部操作条，不能塞进整页滚动的 Column
-            FrameRecordScreen(modifier = Modifier.weight(1f))
-        } else {
         // 每页各自滚动：key(tab) 让每页拿到独立的 ScrollState，切页后回到该页顶部。
         // 共用一个 state 的话，从长页面（项目）切到短页面（外观）会带着上一页的
         // 偏移量过去，看着像内容缺了一块
@@ -1382,25 +1243,6 @@ fun MainScreen(
                 }
 
                 // 统计页自成一屏：自己拉数据、自己定时刷新，只收设置项和两个动作
-                MainTab.STATS -> StatsScreen(
-                    statsEnabled = statsEnabled,
-                    onStatsEnabledChange = onStatsEnabledChange,
-                    intervalSec = statsIntervalSec,
-                    onIntervalChange = onStatsIntervalChange,
-                    notificationEnabled = statsNotification,
-                    onNotificationChange = onStatsNotificationChange,
-                    screenOnOnly = statsScreenOnOnly,
-                    onScreenOnOnlyChange = onStatsScreenOnOnlyChange,
-                    dualCellEnabled = dualCellEnabled,
-                    onDualCellChange = onDualCellChange,
-                    onOpenUsageAccess = onOpenUsageAccess,
-                    onClearData = onClearStats,
-                    onRequestScrollTop = { scope.launch { scrollState.scrollTo(0) } }
-                )
-
-                // 帧记录页在外面单独处理（见上面那个 if），这里留空分支
-                MainTab.FRAMES -> {}
-
                 MainTab.MODULES -> {
                     ModulesCard(
                         moduleFlags = moduleFlags,
@@ -1455,7 +1297,6 @@ fun MainScreen(
                     onFpsDebugChange = onFpsDebugChange
                 )
             }
-        }
         }
 
         BottomTabBar(selected = tab, onSelect = { tab = it })
