@@ -21,7 +21,7 @@ import com.jj.nexusfloat.collector.ForegroundAppTracker;
 import com.jj.nexusfloat.collector.PerformanceCollector;
 import com.jj.nexusfloat.constant.Constants;
 import com.jj.nexusfloat.service.CollectorSignal;
-import com.jj.nexusfloat.ui.view.MonitorView;
+import com.jj.nexusfloat.hud.FusionStripView;
 import com.jj.nexusfloat.utils.LogUtils;
 
 import java.util.Set;
@@ -54,7 +54,7 @@ public final class MonitorOverlay {
 
     private View content;
     /** content 就是 MonitorView 时的同一引用，用来下发模块开关 */
-    private MonitorView monitorView;
+    private FusionStripView monitorView;
     private WindowManager.LayoutParams params;
     private BroadcastReceiver configReceiver;
 
@@ -124,7 +124,7 @@ public final class MonitorOverlay {
         }
         stop();
         content = view;
-        monitorView = (view instanceof MonitorView) ? (MonitorView) view : null;
+        monitorView = (view instanceof FusionStripView) ? (FusionStripView) view : null;
         fallbackMode = false;
 
         // 先把字号和间隔应用上，probeWindowType 才能按正确高度建窗口
@@ -154,7 +154,7 @@ public final class MonitorOverlay {
         }
         stop();
         content = view;
-        monitorView = (view instanceof MonitorView) ? (MonitorView) view : null;
+        monitorView = (view instanceof FusionStripView) ? (FusionStripView) view : null;
         fallbackMode = true;
         startWatching();
     }

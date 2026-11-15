@@ -15,10 +15,10 @@ import android.widget.FrameLayout;
 
 import com.jj.nexusfloat.bridge.NexusBridge;
 import com.jj.nexusfloat.bridge.StatusBarTintBridge;
+import com.jj.nexusfloat.hud.FusionStripView;
 import com.jj.nexusfloat.constant.Constants;
 import com.jj.nexusfloat.service.GpuCollectorLauncher;
 import com.jj.nexusfloat.ui.MonitorOverlay;
-import com.jj.nexusfloat.ui.view.MonitorView;
 import com.jj.nexusfloat.utils.LogUtils;
 import com.jj.nexusfloat.utils.ReflectUtils;
 
@@ -48,7 +48,7 @@ public class ModuleMain extends XposedModule {
      * 字段是实例级时，两条路径各持有一份 monitorView / overlay / injected，
      * 互相不知道对方注入过，去重形同虚设——这是进程内出现两个悬浮窗的原因之一。
      */
-    private static MonitorView monitorView;
+    private static FusionStripView monitorView;
     private static MonitorOverlay overlay;
     private static StatusBarTintBridge tintBridge;
 
@@ -451,7 +451,7 @@ public class ModuleMain extends XposedModule {
         // 必须等用户解锁之后才能拉起来（免得 Direct Boot 下系统把 Provider 查询堵住）
         wakeCollectorSafely(context);
 
-        monitorView = new MonitorView(context);
+        monitorView = new FusionStripView(context);
         // 先按用户设定的字号来，后面窗口/布局高度才能按实际字号算
         monitorView.setFontSizeSp(NexusBridge.getFontSizeSp());
         overlay = new MonitorOverlay(context);
@@ -480,15 +480,11 @@ public class ModuleMain extends XposedModule {
             return;
         }
 
-        // 反色桥接不依赖状态栏 View：DarkIconDispatcher 是从 Dependency 里取的，
-        // statusBar 只用来首次采样参考图标的颜色（传 null 就跳过采样）。
-        // 必须无条件注册——兜底注入那条路上 root 是 null，要是要求 statusBar 非空，
-        // 「自动反色」就永远拿不到系统 tint，只能一直白字
-        if (tintBridge != null) {
-            tintBridge.attach(monitorView, statusBar);
-        }
+        // 反色桥接：C 方案后自动反色暂不接入 DroidDeck 主题（DroidDeck 自带配色），
+        // 因此不再 attach。detach 调用保留：万一将来重新接上，清理路径仍完整；
+        // 未 attach 时 detach 是安全的空操作。
 
-        LogUtils.xposed(this, Log.INFO, "MonitorView injected");
+        LogUtils.xposed(this, Log.INFO, "FusionStripView injected");
     }
 
     /**

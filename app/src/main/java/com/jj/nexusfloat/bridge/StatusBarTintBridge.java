@@ -7,7 +7,6 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.jj.nexusfloat.constant.Constants;
-import com.jj.nexusfloat.ui.view.MonitorView;
 import com.jj.nexusfloat.utils.LogUtils;
 import com.jj.nexusfloat.utils.ReflectUtils;
 
@@ -24,7 +23,8 @@ import java.lang.reflect.Proxy;
 public final class StatusBarTintBridge {
 
     private final ClassLoader classLoader;
-    private MonitorView monitorView;
+    // C 方案：渲染换成 DroidDeckHudView 后自动反色暂不接入其主题，
+    // 不再持有渲染 View，applyTint 改为空操作（见下）。
     private Object dispatcher;
     private Object darkReceiver;
     private int lastTint = Constants.Config.UNPUBLISHED;
@@ -36,9 +36,8 @@ public final class StatusBarTintBridge {
     /**
      * 注册 DarkReceiver，顺便从 dispatcher / 旁边的图标采一下初始颜色。
      */
-    public void attach(MonitorView view, View statusBarRoot) {
+    public void attach(View view, View statusBarRoot) {
         detach();
-        monitorView = view;
         lastTint = Constants.Config.UNPUBLISHED;
 
         try {
@@ -76,7 +75,6 @@ public final class StatusBarTintBridge {
         }
         darkReceiver = null;
         dispatcher = null;
-        monitorView = null;
         lastTint = Constants.Config.UNPUBLISHED;
     }
 
@@ -181,12 +179,9 @@ public final class StatusBarTintBridge {
     }
 
     private void applyTint(int tint) {
-        MonitorView view = monitorView;
-        if (view == null || tint == lastTint) {
-            return;
-        }
+        // C 方案：DroidDeck 主题自带配色，自动反色暂未接入，收到 tint 只记下
+        // 不再下发渲染层（原实现是 monitorView.onColorsChanged(tint)）。
         lastTint = tint;
-        view.post(() -> view.onColorsChanged(tint));
     }
 
     private static int readIntField(Object obj, String[] names, int fallback) {
