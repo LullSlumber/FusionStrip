@@ -219,14 +219,17 @@ class FusionStripView(context: Context) : FrameLayout(context) {
      * 旧的三层同步键（moduleFlags 翻译层）已废弃。
      */
     private var lastCfg: String? = null
-    fun setDroidDeckCfg(json: String?) {
-        if (json == lastCfg) return
+    fun setDroidDeckCfg(json: String?): Boolean {
+        if (json == lastCfg) return false
         lastCfg = json
         if (json.isNullOrEmpty()) {
             applyDefaultConfig()
         } else {
             hudView.applyConfig(json)
         }
+        // 尺寸变了的话内容会重排，但悬浮窗窗口是 WRAP_CONTENT，
+        // 必须靠外层 updateViewLayout 才会重新测量，否则新布局被旧窗口边界裁剪
+        return true
     }
 
     /** 强调线：DroidDeck 渲染本体无线元件，由包装层 onDraw 画在底边（贴游戏一侧）。 */

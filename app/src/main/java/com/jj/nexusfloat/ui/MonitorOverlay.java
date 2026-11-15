@@ -352,13 +352,13 @@ public final class MonitorOverlay {
         SettingsChannel.refresh(context);
 
         // DroidDeck 渲染配置整包（尺寸/不透明度/读数项目全在里面）
-        monitorView.setDroidDeckCfg(NexusBridge.getDroidDeckCfg());
+        boolean cfgChanged = monitorView.setDroidDeckCfg(NexusBridge.getDroidDeckCfg());
         // 强调线：开关与颜色都只影响重绘，不改布局
         monitorView.setStripLineColorIndex(NexusBridge.getStripLineColorIndex());
         monitorView.setStripLineEnabled(NexusBridge.isStripLineEnabled());
         // 采集周期：collector 每轮重读，不影响布局
         monitorView.setIntervalMs(NexusBridge.getUpdateIntervalMs());
-        if (attached && params != null && windowManager != null) {
+        if (cfgChanged && attached && params != null && windowManager != null) {
             // 窗口宽高都是 WRAP_CONTENT，内容变了得 updateViewLayout 才会重新测量
             try {
                 windowManager.updateViewLayout(content, params);
