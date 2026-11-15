@@ -871,12 +871,6 @@ public class MonitorView extends LinearLayout {
             LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) v.getLayoutParams();
             lp.rightMargin = gap;
             v.setLayoutParams(lp);
-            // GPU 图标微沉一点跟柱状图、数值的视觉重心齐平；其余居中
-            float sink = i == Constants.Modules.IDX_GPU
-                    ? sp2px(fontSizeSp * MonitorIconView.SINK_SCALE) : 0f;
-            if (v.getTranslationY() != sink) {
-                v.setTranslationY(sink);
-            }
         }
     }
 

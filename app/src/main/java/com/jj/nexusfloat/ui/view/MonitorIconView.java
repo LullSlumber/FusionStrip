@@ -40,9 +40,6 @@ public final class MonitorIconView extends View {
     public static final float SIZE_SCALE = 1.1f;
     /** 图标最小边长（dp）：字号拉到下限时图标不至于糊成一团 */
     public static final float MIN_SIZE_DP = 6f;
-    /** GPU 图标下沉量 = 当前字号 × 这个系数：显示器图标在 24 视口里偏上，
-     *  微微下沉一点才跟柱状图、数值的视觉重心齐平 */
-    public static final float SINK_SCALE = 0.14f;
 
     /** 常规线宽（24 视口单位，跟 Lucide 原生一致） */
     private static final float STROKE_NORMAL = 2f;
