@@ -27,6 +27,8 @@ import java.util.zip.ZipFile;
  */
 public final class MonitorTypeface {
 
+    private static final String TAG = "NexusFloatFont";
+
     private static Typeface sRegular;
     private static Typeface sBold;
     private static boolean sAttempted;
@@ -37,18 +39,28 @@ public final class MonitorTypeface {
     /**
      * 从模块 APK 里解出并加载字体。重复调用无害（只生效一次）。
      *
+     * v1.9.4-lull.6：每一步都打 logcat（tag NexusFloatFont）。真机上出现过
+     * 「内置字体没生效但监视条正常显示」的无声失败，没有日志没法定位是哪一环
+     * 断了（APK 读不了 / entry 不在 / cache 写不进 / createFromFile 抛）。
+     *
      * @param moduleApkPath 模块自身 APK 的绝对路径（ApplicationInfo.sourceDir）
      * @param cacheDir      写释放文件的目录（SystemUI 的 cache 目录）
      */
     public static void load(String moduleApkPath, File cacheDir) {
         if (sAttempted || moduleApkPath == null || cacheDir == null) {
+            android.util.Log.i(TAG, "load skipped: attempted=" + sAttempted
+                    + " apk=" + moduleApkPath + " cache=" + cacheDir);
             return;
         }
         sAttempted = true;
+        android.util.Log.i(TAG, "load start: apk=" + moduleApkPath
+                + " exists=" + new File(moduleApkPath).canRead()
+                + " cache=" + cacheDir);
         File regular = extractFromApk(moduleApkPath,
                 "assets/segoeui.ttf", new File(cacheDir, "nf_segoeui.ttf"));
         File bold = extractFromApk(moduleApkPath,
                 "assets/segoeuib.ttf", new File(cacheDir, "nf_segoeuib.ttf"));
+        android.util.Log.i(TAG, "extracted: regular=" + regular + " bold=" + bold);
         try {
             if (regular != null) {
                 sRegular = Typeface.createFromFile(regular);
@@ -56,8 +68,10 @@ public final class MonitorTypeface {
             if (bold != null) {
                 sBold = Typeface.createFromFile(bold);
             }
-        } catch (Throwable ignored) {
-            // 字体文件损坏之类的情况：保持 null，回退等宽
+            android.util.Log.i(TAG, "typeface loaded: regular=" + (sRegular != null)
+                    + " bold=" + (sBold != null));
+        } catch (Throwable t) {
+            android.util.Log.e(TAG, "createFromFile failed", t);
         }
     }
 
