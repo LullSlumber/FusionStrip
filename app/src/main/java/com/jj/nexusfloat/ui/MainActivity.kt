@@ -1543,19 +1543,19 @@ fun HeaderCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "NexusFloat",
+                        text = "FusionStrip",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MdThemeOnPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "酷安@叶落雨巷",
+                        text = "基于 NexusFloat · 酷安@叶落雨巷",
                         fontSize = 13.sp,
                         color = MdThemeOnSurfaceVariant
                     )
                     Text(
-                        text = "Github@YeLuoYuXiang",
+                        text = "Github@YeLuoYuXiang · GPLv3",
                         fontSize = 13.sp,
                         color = MdThemeOnSurfaceVariant
                     )

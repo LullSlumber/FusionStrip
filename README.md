@@ -1,4 +1,6 @@
-# NexusFloat
+# FusionStrip
+
+> 基于 [NexusFloat](https://github.com/YeLuoYuXiang/NexusFloat)（酷安@叶落雨巷，GPLv3）的分支：UI 按 Material You 重设计、加入强调线等自定义。上游的全部能力与致谢保留，见下方原文。
 
 酷安@叶落雨巷
 
