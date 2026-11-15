@@ -12,7 +12,6 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.jj.nexusfloat.bridge.FpsSyncBridge;
 import com.jj.nexusfloat.collector.PerformanceCollector;
 import com.jj.nexusfloat.constant.Constants;
 
@@ -1274,11 +1273,6 @@ public class MonitorView extends LinearLayout {
             batCurrentText.setText(clip(Constants.Ui.PROBE_CURRENT,
                     String.format(Locale.US, "%+dmA", (int) data.batteryCurrentMa)));
         }
-        // 把这一拍的帧率同步给模块进程，供「记录」页使用。
-        // 放在 effective 判断之外：即便用户把监视条的 FPS 项关掉了，
-        // 帧记录那边仍然需要一个可信的帧率来源
-        FpsSyncBridge.publish(context, data.fps, data.fpsTag);
-
         if (effective[Constants.Modules.IDX_FPS]) {
             String probe = fpsDebugEnabled
                     ? Constants.Ui.PROBE_FPS_DEBUG : Constants.Ui.PROBE_FPS;

@@ -2,23 +2,15 @@ package com.jj.nexusfloat.bridge;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.ParcelFileDescriptor;
+
 import com.jj.nexusfloat.constant.Constants;
 import com.jj.nexusfloat.utils.LogUtils;
 
-import java.io.FileOutputStream;
-import java.nio.charset.StandardCharsets;
-
-import io.github.libxposed.service.XposedService;
-
 /**
- * 模块 App 进程这边：把 GPU 数据写出去给 SystemUI 读。
+ * 写 GPU 数据：独立 App 化之后只剩本地 SharedPreferences 一条通道。
  *
- * 两条通道并存：
- * publishLocal——写本地 SharedPreferences，SystemUI 经 EarlyInitProvider 读。
- * 不依赖任何框架能力，是保底的那条。
- * publish——写 libxposed RemotePreferences，更快，但要模块自己的进程也被框架注入
- * （实测澎湃 OS 4 上不满足）。
+ * 原版要「本地 prefs 给 provider 快照 + RemotePreferences 给注入进程」双写，
+ * 现在读的都是同一个进程，写本地就够了。
  */
 public final class NexusRemoteWriter {
 
@@ -27,16 +19,13 @@ public final class NexusRemoteWriter {
 
     private NexusRemoteWriter() {}
 
-    /** 绑上模块进程的 Context，本地写入要用 */
+    /** 绑上 App 的 Context，本地写入要用 */
     public static void bind(Context ctx) {
         appContext = ctx != null ? ctx.getApplicationContext() : null;
     }
 
     /**
      * 写本地 SharedPreferences。
-     *
-     * v1.6.10 加的保底通道：SystemUI 从 exported ContentProvider 读同一份 prefs，
-     * 跟框架有没有注入模块进程没关系。
      *
      * 返回写成功没有。
      */
@@ -54,56 +43,11 @@ public final class NexusRemoteWriter {
                 editor.putInt(Constants.Remote.KEY_GPU_USAGE_PERCENT, gpuUsage);
             }
             editor.putLong(Constants.Remote.KEY_UPDATED_AT, System.currentTimeMillis());
-            // 用 commit 不用 apply：下一拍就可能被 SystemUI 读走，
+            // 用 commit 不用 apply：下一拍就可能被读走，
             // apply 是异步落盘，读到的值会慢一拍
             return editor.commit();
         } catch (Throwable t) {
             LogUtils.w("write local prefs failed", t);
-            return false;
-        }
-    }
-
-    /**
-     * 写 RemotePreferences 和备用文件。
-     *
-     * 任意一条通道写成功就算 true。
-     */
-    public static boolean publish(XposedService service, int gpuMhz, int gpuUsage) {
-        if (service == null) {
-            return false;
-        }
-        boolean ok = writePrefs(service, gpuMhz, gpuUsage);
-        if (gpuMhz > 0) {
-            ok |= writeFreqFile(service, gpuMhz);
-        }
-        return ok;
-    }
-
-    private static boolean writePrefs(XposedService service, int gpuMhz, int gpuUsage) {
-        try {
-            SharedPreferences prefs = service.getRemotePreferences(Constants.Remote.PREFS_NAME);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putInt(Constants.Remote.KEY_GPU_FREQ_MHZ, gpuMhz);
-            if (gpuUsage >= 0) {
-                editor.putInt(Constants.Remote.KEY_GPU_USAGE_PERCENT, gpuUsage);
-            }
-            editor.putLong(Constants.Remote.KEY_UPDATED_AT, System.currentTimeMillis());
-            return editor.commit();
-        } catch (Throwable t) {
-            LogUtils.e("write remote prefs failed", t);
-            return false;
-        }
-    }
-
-    private static boolean writeFreqFile(XposedService service, int gpuMhz) {
-        try (ParcelFileDescriptor pfd = service.openRemoteFile(Constants.Remote.GPU_FREQ_FILE)) {
-            try (FileOutputStream fos = new FileOutputStream(pfd.getFileDescriptor())) {
-                fos.write(String.valueOf(gpuMhz).getBytes(StandardCharsets.UTF_8));
-                fos.flush();
-                return true;
-            }
-        } catch (Throwable t) {
-            LogUtils.w("write remote file failed", t);
             return false;
         }
     }

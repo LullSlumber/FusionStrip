@@ -23,11 +23,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.jj.nexusfloat"
+        applicationId = "com.jj.perfhud"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1090408
-        versionName = "1.9.4-lull.8"
+        versionCode = 1000001
+        versionName = "0.1.0-perfhud"
     }
 
     signingConfigs {
@@ -63,8 +63,6 @@ android {
 }
 
 dependencies {
-    compileOnly(libs.libxposed.api)
-    implementation(libs.libxposed.service)
     implementation(libs.appcompat)
     implementation(libs.material)
 

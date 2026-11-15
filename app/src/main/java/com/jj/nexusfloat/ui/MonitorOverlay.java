@@ -15,12 +15,10 @@ import android.view.View;
 import android.view.WindowManager;
 
 import com.jj.nexusfloat.bridge.NexusBridge;
-import com.jj.nexusfloat.bridge.PrefsSnapshot;
-import com.jj.nexusfloat.bridge.SettingsChannel;
 import com.jj.nexusfloat.collector.ForegroundAppTracker;
+import com.jj.nexusfloat.collector.GpuCollectorWorker;
 import com.jj.nexusfloat.collector.PerformanceCollector;
 import com.jj.nexusfloat.constant.Constants;
-import com.jj.nexusfloat.service.CollectorSignal;
 import com.jj.nexusfloat.ui.view.MonitorView;
 import com.jj.nexusfloat.utils.LogUtils;
 
@@ -29,20 +27,17 @@ import java.util.Set;
 /**
  * 拿独立悬浮窗装 MonitorView，按屏幕方向和用户开关决定要不要显示。
  *
- * 监视器原先挂在 R.id.status_bar 下面，可见性完全跟着状态栏窗口走：全屏应用
- * （横屏游戏、看视频）一隐藏状态栏，监视器就跟着没了，得下滑呼出来才能短暂看到。
- * 改成在 SystemUI 进程里自己建窗口之后，就不受状态栏显示状态影响了。
+ * 独立 App 化之后这段代码跑在本 App 自己的进程里（原来在 SystemUI 进程），
+ * 窗口用 TYPE_APPLICATION_OVERLAY，需要用户授予「显示在其他应用上层」权限。
+ * 采集指令也不再走跨进程 provider，直接调同进程的 GpuCollectorWorker。
  *
- * 竖屏/横屏开关和各指标模块开关都是模块 App 写进 libxposed RemotePreferences 的，
- * 这边通过 NexusBridge 读。开关状态、屏幕方向、前台应用统一在 evaluate() 里判定：
+ * 竖屏/横屏开关和各指标模块开关通过 NexusBridge 读（现在是本地 SharedPreferences）。
+ * 开关状态、屏幕方向、前台应用统一在 evaluate() 里判定：
  * 配置变更广播触发一次立即判定，另外还有 Constants.Overlay#WATCH_INTERVAL_MS 的
  * 周期轮询，用来抓 App 端刚改的开关和前台应用切换。
  *
- * 隐藏的时候不只是看不见：MonitorView 的采集线程会随 detach 停掉，模块进程里的
+ * 隐藏的时候不只是看不见：MonitorView 的采集线程会随 detach 停掉，
  * root GPU 采集也会被通知暂停，所以隐藏状态下不耗电。
- *
- * 这段代码跑在 SystemUI 进程（system uid）里，已经持有添加系统窗口需要的权限，
- * 模块自己的 Manifest 不用声明 SYSTEM_ALERT_WINDOW。
  */
 public final class MonitorOverlay {
 
@@ -88,12 +83,10 @@ public final class MonitorOverlay {
     private boolean attached;
     /** watch 循环在不在跑 */
     private boolean watching;
-    /** 上次已经通知给模块进程的采集状态，免得每秒重复下发同一条指令 */
+    /** 上次已经通知给采集器的显示状态，免得每秒重复下发同一条指令 */
     private Boolean lastCollectSignal;
     /** 同一个状态连续保持了几轮，用来做周期性复发指令 */
     private int signalTicks;
-    /** 距上次后台唤醒过了多少轮（v1.8.11） */
-    private int wakeElapsedTicks;
 
     private final Runnable watchRunnable = new Runnable() {
         @Override
@@ -110,8 +103,6 @@ public final class MonitorOverlay {
         this.context = context;
         this.windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         this.foregroundTracker = new ForegroundAppTracker(context);
-        // 设置快照要拿 Context 去 query 模块 App 的 provider
-        PrefsSnapshot.bind(context);
     }
 
     /**
@@ -264,13 +255,9 @@ public final class MonitorOverlay {
         }
 
         // 无条件同步，不放在上面的状态迁移分支里：开机后要是当前方向本来就关着，
-        // 监视条从来没添加过，也就谈不上「移除」这个迁移，可模块进程的采集默认是开着的，
+        // 监视条从来没添加过，也就谈不上「移除」这个迁移，可采集默认是开着的，
         // 得靠这里把它关掉。signalCollector 自己会去重。
         signalCollector(shouldShow);
-
-        // 后台唤醒：模块进程被 ROM 清掉时，按用户设的间隔把它拉回来，
-        // 否则 GPU 数据会一直停在进程被杀之前的值
-        wakeModuleIfDue(shouldShow);
 
     }
 
@@ -301,55 +288,23 @@ public final class MonitorOverlay {
         }
         signalTicks = 0;
         lastCollectSignal = collecting;
-        CollectorSignal.send(context, collecting);
+        // 同进程直调：GpuCollectorWorker 自己会按需求启停
+        GpuCollectorWorker.setOverlayDemand(collecting);
     }
 
     /**
-     * 定时唤醒模块进程（v1.8.11）。
-     *
-     * 为什么需要：GPU 数据由模块 App 进程用 root 读出来再回传，进程被清掉数据就停更。
-     * ColorOS 在最近任务里点「全部清除」会把应用置为 stopped 状态，这种状态下
-     * 系统只放行带 FLAG_INCLUDE_STOPPED_PACKAGES 的广播。划卡只是普通杀进程、
-     * 不置 stopped，所以划卡没事，只有全部清除后才需要这条。
-     *
-     * 频率由用户设定，0 表示关闭、只用原来的心跳。
-     * 只在监视条需要显示时才唤醒，隐藏时唤起来没人看，白耗电。
+     * 独立 App 化之后没有「模块进程」可唤醒，此逻辑整体移除。
+     * evaluate() 里的调用点一并删掉；唤醒间隔设置保留只为兼容旧存储。
      */
-    private void wakeModuleIfDue(boolean showing) {
-        if (!showing) {
-            wakeElapsedTicks = 0;
-            return;
-        }
-        int intervalSec = NexusBridge.getWakeIntervalSec();
-        if (intervalSec <= 0) {
-            wakeElapsedTicks = 0;
-            return;
-        }
-        // watch 循环每 WATCH_INTERVAL_MS 一轮，据此换算成需要等多少轮
-        int ticksNeeded = (int) Math.max(1,
-                intervalSec * 1000L / Constants.Overlay.WATCH_INTERVAL_MS);
-        if (++wakeElapsedTicks < ticksNeeded) {
-            return;
-        }
-        wakeElapsedTicks = 0;
-        CollectorSignal.wakeModule(context);
-        // 顺带确认采集在跑：模块进程刚被广播唤起时，需求还没打开
-        CollectorSignal.send(context, true);
-    }
 
     /**
-     * 把 App 端写进 Remote 的模块开关、名称、背景开关、字号和项目间隔下发给 MonitorView。
+     * 把 App 端写进 prefs 的模块开关、名称、背景开关、字号和项目间隔下发给 MonitorView。
      * 有变化的话窗口尺寸会跟着变，得触发一次窗口重新测量。
      */
     private void syncModuleFlags() {
         if (monitorView == null) {
             return;
         }
-        // 请求刷新设置快照。真正的 query 在后台线程做，这个调用立刻返回。
-        // 这是 RemotePreferences 不可用的机型（实测澎湃 OS 4）拿到设置的途径
-        PrefsSnapshot.requestRefresh();
-        // Settings.Global 通道：system uid 直接读，很轻，每轮都刷得起
-        SettingsChannel.refresh(context);
 
         boolean changed = monitorView.setModuleEnabled(NexusBridge.readModuleFlags());
         changed |= monitorView.setModuleNames(NexusBridge.readModuleNames());

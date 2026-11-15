@@ -38,9 +38,6 @@ import androidx.annotation.DrawableRes
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
-import com.jj.nexusfloat.stats.StatsRepository
-import com.jj.nexusfloat.stats.StatsService
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -51,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -62,17 +60,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jj.nexusfloat.App
-import com.jj.nexusfloat.bridge.SettingsChannel
 import com.jj.nexusfloat.collector.GpuCollectorWorker
 import com.jj.nexusfloat.collector.GpuRootReader
 import com.jj.nexusfloat.collector.SysfsReader
 import com.jj.nexusfloat.constant.Constants
 import com.jj.nexusfloat.service.GpuCollectorLauncher
+import com.jj.nexusfloat.service.OverlayService
 import com.jj.nexusfloat.ui.theme.*
 import com.jj.nexusfloat.utils.ExecUtils
 import com.jj.nexusfloat.utils.LogUtils
-import io.github.libxposed.service.XposedService
 import java.io.File
 import java.io.FileOutputStream
 
@@ -89,17 +85,13 @@ class MainActivity : ComponentActivity() {
     /** 息屏时还显不显示监视条（v1.8.10），默认不显示 */
     private var showScreenOff by mutableStateOf(false)
 
-    // ---- 统计页 ----
-    /** 统计总开关，默认开：装了模块就是想看数据 */
-    private var statsEnabled by mutableStateOf(true)
-    /** 采样间隔（秒） */
-    private var statsIntervalSec by mutableStateOf(Constants.Stats.INTERVAL_DEFAULT_SEC)
-    /** 常驻通知开关 */
-    private var statsNotification by mutableStateOf(true)
-    /** 只在亮屏时记录 */
-    private var statsScreenOnOnly by mutableStateOf(false)
     /** 仅充电时显示（v1.8.14），默认关——不充电也照常显示 */
     private var showChargingOnly by mutableStateOf(false)
+    /**
+     * HUD 总开关（PerfHUD 新增）：关掉就不跑悬浮条前台服务、不采集。
+     * 跟按方向的开关不同：这是整个悬浮条的生死开关。
+     */
+    private var hudEnabled by mutableStateOf(true)
     /**
      * 后台唤醒间隔（秒，v1.8.11）：0 表示关闭。
      * ColorOS 划卡清掉模块进程后，靠这个定时把进程拉回来，GPU 数据才不会断。
@@ -206,23 +198,11 @@ class MainActivity : ComponentActivity() {
         showLandscape = readSwitch(Constants.Remote.KEY_SHOW_LANDSCAPE)
         showScreenOff = readSwitch(Constants.Remote.KEY_SHOW_SCREEN_OFF, default = false)
         showChargingOnly = readSwitch(Constants.Remote.KEY_SHOW_CHARGING_ONLY, default = false)
+        hudEnabled = readSwitch(Constants.Modules.KEY_HUD_ENABLED, default = true)
         wakeIntervalSec = readInt(
             Constants.Modules.KEY_WAKE_INTERVAL,
             Constants.Modules.WAKE_INTERVAL_DEFAULT_SEC
         )
-        // 统计页四项设置。默认值跟 StatsService.startIfEnabled 保持一致：
-        // 那边默认开，这边要是默认关，界面显示的状态就和实际跑的对不上
-        statsEnabled = readSwitch(Constants.Stats.KEY_ENABLED, default = true)
-        statsIntervalSec = readInt(
-            Constants.Stats.KEY_INTERVAL_SEC,
-            Constants.Stats.INTERVAL_DEFAULT_SEC
-        ).coerceIn(Constants.Stats.INTERVAL_MIN_SEC, Constants.Stats.INTERVAL_MAX_SEC)
-        statsNotification = readSwitch(Constants.Stats.KEY_NOTIFICATION, default = true)
-        statsScreenOnOnly = readSwitch(Constants.Stats.KEY_SCREEN_ON_ONLY, default = false)
-        // 统计功能开着就确保采样服务在跑：用户可能是从桌面图标进来的
-        if (statsEnabled) {
-            StatsService.startIfEnabled(this)
-        }
         for (i in 0 until Constants.Modules.COUNT) {
             // 默认值取 DEFAULT_ENABLED（v1.8.11 起只默认开 CPU/GPU/功率/FPS），
             // 与 NexusBridge.readModuleFlags 保持一致，否则界面显示的开关状态
@@ -458,7 +438,8 @@ class MainActivity : ComponentActivity() {
                                 fpsDebug = checked
                                 saveSwitch(Constants.Modules.KEY_FPS_DEBUG, checked)
                             },
-                            onRestartSystemUi = { restartSystemUi() },
+                            hudEnabled = hudEnabled,
+                            onHudEnabledChange = { applyHudEnabled(it) },
                             appTheme = appTheme,
                             onAppThemeChange = { value ->
                                 appTheme = value
@@ -471,23 +452,7 @@ class MainActivity : ComponentActivity() {
                             onSpaceBeforeCommit = { commitSpaceBefore(it) },
                             xposedConnected = xposedConnected,
                             lastUpdateText = lastUpdateText,
-                            versionName = versionName,
-                            statsEnabled = statsEnabled,
-                            onStatsEnabledChange = { applyStatsEnabled(it) },
-                            statsIntervalSec = statsIntervalSec,
-                            onStatsIntervalChange = { changeStatsInterval(it) },
-                            statsNotification = statsNotification,
-                            onStatsNotificationChange = { checked ->
-                                statsNotification = checked
-                                saveSwitch(Constants.Stats.KEY_NOTIFICATION, checked)
-                            },
-                            statsScreenOnOnly = statsScreenOnOnly,
-                            onStatsScreenOnOnlyChange = { checked ->
-                                statsScreenOnOnly = checked
-                                saveSwitch(Constants.Stats.KEY_SCREEN_ON_ONLY, checked)
-                            },
-                            onOpenUsageAccess = { openUsageAccessSettings() },
-                            onClearStats = { clearStats() }
+                            versionName = versionName
                         )
                     }
                 }
@@ -502,9 +467,6 @@ class MainActivity : ComponentActivity() {
         GpuCollectorWorker.setUiDemand(true)
         GpuCollectorLauncher.startInProcess()
         mainHandler.post(refreshRunnable)
-        // 每次进界面都补推一次整表：覆盖「上次改设置时 root 还没授权」
-        // 以及「用户从旧版本升上来、Settings.Global 里还没有快照」这两种情况
-        publishSettings()
     }
 
     override fun onStop() {
@@ -513,90 +475,31 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
-    private fun restartSystemUi() {
-        Toast.makeText(this, "正在请求 Root 重启 SystemUI...", Toast.LENGTH_SHORT).show()
-        Thread {
-            val out = ExecUtils.exec("killall com.android.systemui || pkill -f com.android.systemui")
-            LogUtils.i("Restart SystemUI result: $out")
-        }.start()
-    }
-
     /**
-     * 应用统计总开关。
+     * HUD 总开关：立刻启停悬浮条宿主服务。
      *
-     * 除了存设置，还要立刻让采样服务跟着启停：用户点完开关就该马上生效。
-     * 方法名不叫 setStatsEnabled——那样会跟 statsEnabled 属性自动生成的 setter
-     * 撞上同一个 JVM 签名，编译器报 platform declaration clash。
+     * 开：拉起 OverlayService（权限没授时服务内部会重试，并引导授权）。
+     * 关：停掉服务，onDestroy 会顺带把 root 采集停干净。
      */
-    private fun applyStatsEnabled(enabled: Boolean) {
-        statsEnabled = enabled
-        saveSwitch(Constants.Stats.KEY_ENABLED, enabled)
-        if (enabled) {
-            StatsService.startIfEnabled(this)
-            Toast.makeText(this, "已开启统计，正在记录充电与使用情况", Toast.LENGTH_SHORT).show()
-        } else {
-            StatsService.stop(this)
-            Toast.makeText(this, "已停止统计，历史数据仍然保留", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    /**
-     * 调采样间隔。
-     *
-     * 夹到合法区间之后回写。采样循环每拍重读一次间隔，所以改完不用重启服务。
-     */
-    private fun changeStatsInterval(delta: Int) {
-        val next = (statsIntervalSec + delta * Constants.Stats.INTERVAL_STEP_SEC)
-            .coerceIn(Constants.Stats.INTERVAL_MIN_SEC, Constants.Stats.INTERVAL_MAX_SEC)
-        if (next == statsIntervalSec) {
-            Toast.makeText(
-                this,
-                if (delta > 0) "最长 ${Constants.Stats.INTERVAL_MAX_SEC} 秒"
-                else "最短 ${Constants.Stats.INTERVAL_MIN_SEC} 秒",
-                Toast.LENGTH_SHORT
-            ).show()
-            return
-        }
-        statsIntervalSec = next
-        saveInt(Constants.Stats.KEY_INTERVAL_SEC, next)
-    }
-
-    /**
-     * 跳系统「使用情况访问」设置页。
-     *
-     * 这个权限没有运行时申请接口，只能把用户送到设置页自己打开。直接 startActivity
-     * 可能抛 ActivityNotFoundException（部分精简 ROM 裁了这个页面），那就退回设置首页。
-     */
-    private fun openUsageAccessSettings() {
-        val direct = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-        direct.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    private fun applyHudEnabled(enabled: Boolean) {
+        hudEnabled = enabled
+        saveSwitch(Constants.Modules.KEY_HUD_ENABLED, enabled)
         try {
-            startActivity(direct)
+            if (enabled) {
+                val intent = Intent(this, OverlayService::class.java)
+                startForegroundService(intent)
+                if (!Settings.canDrawOverlays(this)) {
+                    Toast.makeText(this, "请先授予悬浮窗权限", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "悬浮条已开启", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                stopService(Intent(this, OverlayService::class.java))
+                Toast.makeText(this, "悬浮条已关闭", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
-            LogUtils.w("open usage access settings failed, fallback to app details", e)
-            try {
-                startActivity(
-                    Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            } catch (e2: Exception) {
-                Toast.makeText(
-                    this,
-                    "打不开系统设置，请手动到「设置 → 应用 → 特殊权限」里授权",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+            LogUtils.w("toggle hud failed", e)
         }
-    }
-
-    /** 清空统计数据。跑在后台线程，几千行删除不该卡住点按的那一下 */
-    private fun clearStats() {
-        Toast.makeText(this, "正在清空统计数据…", Toast.LENGTH_SHORT).show()
-        Thread {
-            StatsRepository.clearAll(applicationContext)
-            mainHandler.post {
-                Toast.makeText(this, "统计数据已清空", Toast.LENGTH_SHORT).show()
-            }
-        }.start()
     }
 
     /**
@@ -717,82 +620,26 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * 读开关：优先 RemotePreferences（SystemUI 侧读的就是它），
-     * 没绑上 Xposed 服务就退回本地 SharedPreferences。
+     * 读开关。独立 App 化之后只有本地 SharedPreferences 一条通道。
      */
     private fun readSwitch(key: String, default: Boolean = true): Boolean {
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                if (remotePrefs.contains(key)) {
-                    return remotePrefs.getBoolean(key, default)
-                }
-            } catch (e: Exception) {
-                LogUtils.w("Failed to read $key from RemotePreferences", e)
-            }
-        }
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         return localPrefs.getBoolean(key, default)
     }
 
     /**
-     * 写开关：本地和 RemotePreferences 双写。
-     * SystemUI 侧每秒轮询，所以改完大约 1 秒内生效，不用重启作用域。
+     * 写开关。写完悬浮条侧约 1 秒内轮询生效，不用重启。
      */
     private fun saveSwitch(key: String, enabled: Boolean) {
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         localPrefs.edit().putBoolean(key, enabled).apply()
-
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                remotePrefs.edit().putBoolean(key, enabled).apply()
-            } catch (e: Exception) {
-                LogUtils.e("Failed to save $key to RemotePreferences", e)
-            }
-        }
-        publishSettings()
     }
 
-    /**
-     * 把设置整表推到 Settings.Global，给 SystemUI 侧读。
-     *
-     * 这是 v1.6.11 加的第三条通道：RemotePreferences 要求模块进程被注入
-     * （澎湃 OS 4 不满足），ContentProvider 要求跨应用 query 能通（可能被
-     * SELinux 挡住），而这条只要 root 在就通。
-     *
-     * 放后台线程：写入要 fork 一次 settings 命令，几十毫秒，不该卡住点开关的手感。
-     * 每次改动都推整表，不做增量——整表才几百字节，比维护增量状态简单可靠。
-     */
-    private fun publishSettings() {
-        Thread { SettingsChannel.publish(applicationContext) }.start()
-    }
-
-    /**
-     * 读白名单：包名用换行分隔存成一个字符串。
-     * 跟开关一样优先 Remote，绑不上就退回本地。
-     */
+    /** 读白名单：包名用换行分隔存成一个字符串。 */
     private fun readWhitelist(): Set<String> {
         val key = Constants.Modules.KEY_APP_WHITELIST
-        var raw: String? = null
-
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                if (remotePrefs.contains(key)) {
-                    raw = remotePrefs.getString(key, "")
-                }
-            } catch (e: Exception) {
-                LogUtils.w("Failed to read whitelist from RemotePreferences", e)
-            }
-        }
-        if (raw == null) {
-            val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
-            raw = localPrefs.getString(key, "")
-        }
+        val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
+        val raw = localPrefs.getString(key, "")
         return raw?.split(Constants.Modules.WHITELIST_SEPARATOR)
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
@@ -800,25 +647,13 @@ class MainActivity : ComponentActivity() {
             ?: emptySet()
     }
 
-    /** 写白名单并同步到 Remote，顺便更新界面状态 */
+    /** 写白名单并更新界面状态 */
     private fun saveWhitelist(packages: Set<String>) {
         whitelist = packages
         val key = Constants.Modules.KEY_APP_WHITELIST
         val raw = packages.joinToString(Constants.Modules.WHITELIST_SEPARATOR)
-
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         localPrefs.edit().putString(key, raw).apply()
-
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                remotePrefs.edit().putString(key, raw).apply()
-            } catch (e: Exception) {
-                LogUtils.e("Failed to save whitelist to RemotePreferences", e)
-            }
-        }
-        publishSettings()
     }
 
     private fun toggleWhitelist(packageName: String, checked: Boolean) {
@@ -831,126 +666,43 @@ class MainActivity : ComponentActivity() {
         saveWhitelist(next)
     }
 
-    /** 读浮点设定项；跟开关一样优先 Remote，绑不上就退回本地 */
+    /** 读浮点设定项 */
     private fun readFloat(key: String, default: Float): Float {
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                if (remotePrefs.contains(key)) {
-                    return remotePrefs.getFloat(key, default)
-                }
-            } catch (e: Exception) {
-                LogUtils.w("Failed to read $key from RemotePreferences", e)
-            }
-        }
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         return localPrefs.getFloat(key, default)
     }
 
-    /**
-     * 读字符串设定项；跟开关一样优先 Remote，绑不上就退回本地。
-     *
-     * 用 contains 判断，而不是「取到空串就当没设过」：空串是自定义名称的合法取值
-     * （表示不显示名称），要是空串回退默认值，用户就永远清不掉名称了。
-     */
     private fun readString(key: String, default: String): String {
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                if (remotePrefs.contains(key)) {
-                    return remotePrefs.getString(key, default) ?: default
-                }
-            } catch (e: Exception) {
-                LogUtils.w("Failed to read $key from RemotePreferences", e)
-            }
-        }
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         return localPrefs.getString(key, default) ?: default
     }
 
-    /** 写字符串设定项：本地和 Remote 双写，悬浮窗侧每秒轮询就能生效 */
+    /** 写字符串设定项，悬浮窗侧每秒轮询就能生效 */
     private fun saveString(key: String, value: String) {
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         localPrefs.edit().putString(key, value).apply()
-
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                remotePrefs.edit().putString(key, value).apply()
-            } catch (e: Exception) {
-                LogUtils.e("Failed to save $key to RemotePreferences", e)
-            }
-        }
-        publishSettings()
     }
 
-    /** 写浮点设定项：本地和 Remote 双写，悬浮窗侧每秒轮询就能生效 */
+    /** 写浮点设定项，悬浮窗侧每秒轮询就能生效 */
     private fun saveFloat(key: String, value: Float) {
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         localPrefs.edit().putFloat(key, value).apply()
-
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                remotePrefs.edit().putFloat(key, value).apply()
-            } catch (e: Exception) {
-                LogUtils.e("Failed to save $key to RemotePreferences", e)
-            }
-        }
-        publishSettings()
     }
 
-    /** 读整型设定项；跟开关一样优先 Remote，绑不上就退回本地 */
+    /** 读整型设定项 */
     private fun readInt(key: String, default: Int): Int {
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                if (remotePrefs.contains(key)) {
-                    return remotePrefs.getInt(key, default)
-                }
-            } catch (e: Exception) {
-                LogUtils.w("Failed to read $key from RemotePreferences", e)
-            }
-        }
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         return localPrefs.getInt(key, default)
     }
 
-    /** 写整型设定项：本地和 Remote 双写 */
+    /** 写整型设定项 */
     private fun saveInt(key: String, value: Int) {
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         localPrefs.edit().putInt(key, value).apply()
-
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                remotePrefs.edit().putInt(key, value).apply()
-            } catch (e: Exception) {
-                LogUtils.e("Failed to save $key to RemotePreferences", e)
-            }
-        }
-        publishSettings()
     }
 
     /** 读长整型；只有 GPU 数据的时间戳在用 */
     private fun readLong(key: String, default: Long): Long {
-        val svc: XposedService? = App.getXposedService()
-        if (svc != null) {
-            try {
-                val remotePrefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                if (remotePrefs.contains(key)) {
-                    return remotePrefs.getLong(key, default)
-                }
-            } catch (e: Exception) {
-                LogUtils.w("Failed to read $key from RemotePreferences", e)
-            }
-        }
         val localPrefs = getSharedPreferences(Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
         return localPrefs.getLong(key, default)
     }
@@ -1135,40 +887,12 @@ class MainActivity : ComponentActivity() {
             localUsage = SysfsReader.direct().readGpuUsagePercent()
         }
 
-        var remoteFreq = 0
-        var remoteUsage = -1
-        var updated = 0L
+        // 「采集在跑」的判据：本地 prefs 里的 GPU 数据时间戳
+        val updated = readLong(Constants.Remote.KEY_UPDATED_AT, 0L)
+        xposedConnected = updated > 0
 
-        val svc: XposedService? = App.getXposedService()
-        // 「已连接」的判据不再只看 XposedService：有些框架（实测澎湃 OS 4 上的
-        // LSPosed）只注入 SystemUI、不注入模块自身进程，服务永远绑不上，可监视条
-        // 照样工作——这时候显示「未连接」会让人以为模块坏了。改成「服务可用，或者
-        // 监视条确实在读设置」，后者由本地 prefs 里的时间戳体现
-        val providerAlive = readLong(Constants.Remote.KEY_UPDATED_AT, 0L) > 0
-        xposedConnected = svc != null || providerAlive
-
-        if (svc != null) {
-            try {
-                val prefs = svc.getRemotePreferences(Constants.Remote.PREFS_NAME)
-                remoteFreq = prefs.getInt(Constants.Remote.KEY_GPU_FREQ_MHZ, 0)
-                remoteUsage = prefs.getInt(Constants.Remote.KEY_GPU_USAGE_PERCENT, -1)
-                updated = prefs.getLong(Constants.Remote.KEY_UPDATED_AT, 0L)
-            } catch (_: Exception) {
-            }
-        }
-        // Remote 拿不到就读本地：GPU 采集从 v1.6.10 起总会写本地一份
-        if (remoteFreq <= 0) {
-            remoteFreq = readInt(Constants.Remote.KEY_GPU_FREQ_MHZ, 0)
-        }
-        if (remoteUsage < 0) {
-            remoteUsage = readInt(Constants.Remote.KEY_GPU_USAGE_PERCENT, -1)
-        }
-        if (updated <= 0L) {
-            updated = readLong(Constants.Remote.KEY_UPDATED_AT, 0L)
-        }
-
-        val finalFreq = if (remoteFreq > 0) remoteFreq else localFreq
-        val finalUsage = if (remoteUsage >= 0) remoteUsage else localUsage
+        val finalFreq = localFreq
+        val finalUsage = localUsage
 
         gpuFreqText = if (finalFreq > 0) "$finalFreq MHz" else "N/A"
         gpuUsageText = if (finalUsage >= 0) "$finalUsage %" else "N/A"
@@ -1176,10 +900,10 @@ class MainActivity : ComponentActivity() {
         lastUpdateText = when {
             updated > 0 -> {
                 val diffSec = maxOf(0L, (System.currentTimeMillis() - updated) / 1000)
-                "上次同步：$diffSec 秒前 (Remote)"
+                "上次采集：$diffSec 秒前"
             }
             localFreq > 0 || localUsage >= 0 -> "数据源：本机直读 sysfs"
-            else -> "上次同步：从未 (请检查 root 授权)"
+            else -> "尚未采集（请检查 root 授权与悬浮条开关）"
         }
     }
 }
@@ -1194,10 +918,6 @@ class MainActivity : ComponentActivity() {
 private enum class MainTab(val title: String, val icon: String) {
     /** 运行状态 + 显示时机 + 维护 + 使用须知：打开 App 最先要确认的几件事 */
     STATUS("状态", "◉"),
-    /** 充电曲线 + 使用统计 + 设置：只读看板，跟「调开关」分开放 */
-    STATS("统计", "▤"),
-    /** 记录：设备信息 + 历史记录 + 悬浮球开关，一页看完 */
-    FRAMES("记录", "▢"),
     /** 监视项目 + 外观与校正：「显示什么」和「长什么样」搁一起才顺手 */
     MODULES("项目", "☰"),
     /** FPS 来源：六个开关加预设，独占一页 */
@@ -1258,9 +978,10 @@ fun MainScreen(
     onSfPreferRootChange: (Boolean) -> Unit,
     fpsDebug: Boolean,
     onFpsDebugChange: (Boolean) -> Unit,
+    hudEnabled: Boolean,
+    onHudEnabledChange: (Boolean) -> Unit,
     moduleOrder: IntArray,
     onMoveModule: (Int, Boolean) -> Unit,
-    onRestartSystemUi: () -> Unit,
     appTheme: Int,
     onAppThemeChange: (Int) -> Unit,
     hasWallpaper: Boolean,
@@ -1270,28 +991,11 @@ fun MainScreen(
     onSpaceBeforeCommit: (String) -> Unit,
     xposedConnected: Boolean,
     lastUpdateText: String,
-    versionName: String,
-    statsEnabled: Boolean,
-    onStatsEnabledChange: (Boolean) -> Unit,
-    statsIntervalSec: Int,
-    onStatsIntervalChange: (Int) -> Unit,
-    statsNotification: Boolean,
-    onStatsNotificationChange: (Boolean) -> Unit,
-    statsScreenOnOnly: Boolean,
-    onStatsScreenOnOnlyChange: (Boolean) -> Unit,
-    onOpenUsageAccess: () -> Unit,
-    onClearStats: () -> Unit
+    versionName: String
 ) {
     var tab by rememberSaveable { mutableStateOf(MainTab.STATUS) }
-    // 只用来响应「把统计页滚回顶部」：记录详情是统计页里就地替换内容的二级视图，
-    // 而滚动状态在这一层，所以得由这里代劳
-    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier) {
-        if (tab == MainTab.FRAMES) {
-            // 帧记录页自成一屏：它有自己固定的底部操作条，不能塞进整页滚动的 Column
-            FrameRecordScreen(modifier = Modifier.weight(1f))
-        } else {
         // 每页各自滚动：key(tab) 让每页拿到独立的 ScrollState，切页后回到该页顶部。
         // 共用一个 state 的话，从长页面（项目）切到短页面（外观）会带着上一页的
         // 偏移量过去，看着像内容缺了一块
@@ -1323,6 +1027,8 @@ fun MainScreen(
                         lastUpdateText = lastUpdateText
                     )
                     DisplayCard(
+                        hudEnabled = hudEnabled,
+                        onHudEnabledChange = onHudEnabledChange,
                         showPortrait = showPortrait,
                         showLandscape = showLandscape,
                         onShowPortraitChange = onShowPortraitChange,
@@ -1341,32 +1047,10 @@ fun MainScreen(
                         onIntervalTextChange = onIntervalTextChange,
                         onIntervalCommit = onIntervalCommit
                     )
-                    // 维护排在使用须知前面：它是「让改动生效」的收尾动作，
-                    // 属于要动手的部分，该排在只读说明前头
-                    MaintenanceCard(onRestartSystemUi = onRestartSystemUi)
+                    OverlayPermCard()
                     GuidanceCard()
                     ChangelogCard()
                 }
-
-                // 统计页自成一屏：自己拉数据、自己定时刷新，只收设置项和两个动作
-                MainTab.STATS -> StatsScreen(
-                    statsEnabled = statsEnabled,
-                    onStatsEnabledChange = onStatsEnabledChange,
-                    intervalSec = statsIntervalSec,
-                    onIntervalChange = onStatsIntervalChange,
-                    notificationEnabled = statsNotification,
-                    onNotificationChange = onStatsNotificationChange,
-                    screenOnOnly = statsScreenOnOnly,
-                    onScreenOnOnlyChange = onStatsScreenOnOnlyChange,
-                    dualCellEnabled = dualCellEnabled,
-                    onDualCellChange = onDualCellChange,
-                    onOpenUsageAccess = onOpenUsageAccess,
-                    onClearData = onClearStats,
-                    onRequestScrollTop = { scope.launch { scrollState.scrollTo(0) } }
-                )
-
-                // 帧记录页在外面单独处理（见上面那个 if），这里留空分支
-                MainTab.FRAMES -> {}
 
                 MainTab.MODULES -> {
                     ModulesCard(
@@ -1418,7 +1102,6 @@ fun MainScreen(
                     onFpsDebugChange = onFpsDebugChange
                 )
             }
-        }
         }
 
         BottomTabBar(selected = tab, onSelect = { tab = it })
@@ -1794,6 +1477,8 @@ private fun NameField(
 
 @Composable
 fun DisplayCard(
+    hudEnabled: Boolean,
+    onHudEnabledChange: (Boolean) -> Unit,
     showPortrait: Boolean,
     showLandscape: Boolean,
     onShowPortraitChange: (Boolean) -> Unit,
@@ -1813,6 +1498,15 @@ fun DisplayCard(
     onIntervalCommit: () -> Unit
 ) {
     SectionCard(title = "显示时机") {
+        // HUD 总开关（PerfHUD 新增）：关掉整个悬浮条不再出现，采集一并停止。
+        // 排在最上面：它决定下面这些开关有没有意义
+        ToggleRow(
+            label = "悬浮条",
+            checked = hudEnabled,
+            onCheckedChange = onHudEnabledChange,
+            description = "总开关。关闭后悬浮条完全隐藏并停止采集，不耗电"
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         // 控制这个方向下显不显示监视条
         ToggleRow(
             label = "竖屏",
@@ -2682,7 +2376,7 @@ fun StatusCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "LSPosed 服务",
+                text = "采集服务",
                 fontSize = 14.sp,
                 color = MdThemeOnSurface,
                 modifier = Modifier.weight(1f)
@@ -2808,9 +2502,9 @@ fun GuidanceCard() {
     SectionCard(title = "使用须知") {
         GuidanceItem(1, "授予 Root 权限，用于后台采集 GPU 指标。")
         Spacer(modifier = Modifier.height(6.dp))
-        GuidanceItem(2, "LSPosed 作用域必须勾选「系统界面 (SystemUI)」。")
+        GuidanceItem(2, "首次使用请授予「显示在其他应用上层」权限。")
         Spacer(modifier = Modifier.height(6.dp))
-        GuidanceItem(3, "以上开关约 1 秒内生效，无需重启作用域。")
+        GuidanceItem(3, "以上开关约 1 秒内生效，无需重启。")
         Spacer(modifier = Modifier.height(6.dp))
         GuidanceItem(4, "监视条隐藏期间采集线程一并停止，不额外耗电。")
     }
@@ -2836,19 +2530,37 @@ private fun GuidanceItem(index: Int, text: String) {
 }
 
 /**
- * 维护操作卡片，在「状态」页。
+ * 悬浮窗权限卡片，在「状态」页。
  *
- * 单独成卡而不是塞进 GuidanceCard：这里是真会动系统的操作（杀掉 SystemUI 进程），
- * 跟只读的说明文字混排容易误触。
+ * 独立 App 化之后监视条走 TYPE_APPLICATION_OVERLAY，必须用户亲自授权；
+ * 服务端会在权限到手后自动把悬浮条挂出来，这里只负责引导。
  */
 @Composable
-fun MaintenanceCard(onRestartSystemUi: () -> Unit) {
-    SectionCard(title = "维护") {
+fun OverlayPermCard() {
+    val context = LocalContext.current
+    val granted = Settings.canDrawOverlays(context)
+    SectionCard(title = "悬浮窗权限") {
         ActionRow(
-            label = "重启系统界面",
-            description = "修改作用域后点此重启 SystemUI 使 Hook 生效",
-            buttonText = "重启",
-            onClick = onRestartSystemUi
+            label = if (granted) "已授权" else "未授权",
+            description = if (granted) {
+                "监视条可以显示在其他应用上层"
+            } else {
+                "监视条需要「显示在其他应用上层」权限才能显示"
+            },
+            buttonText = if (granted) "管理" else "去授权",
+            onClick = {
+                try {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (e: Exception) {
+                    LogUtils.w("open overlay settings failed", e)
+                    Toast.makeText(context, "打不开系统设置，请手动到「设置 → 应用」里授权", Toast.LENGTH_LONG).show()
+                }
+            }
         )
     }
 }

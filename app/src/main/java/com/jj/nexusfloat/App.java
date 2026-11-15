@@ -2,49 +2,27 @@ package com.jj.nexusfloat;
 
 import android.app.Application;
 
+import com.jj.nexusfloat.bridge.NexusBridge;
 import com.jj.nexusfloat.bridge.NexusRemoteWriter;
-import com.jj.nexusfloat.collector.GpuCollectorWorker;
-
-import io.github.libxposed.service.XposedService;
-import io.github.libxposed.service.XposedServiceHelper;
 
 /**
- * 模块的 Application：绑上 libxposed 的 XposedService 之后把 GPU 采集起起来。
+ * PerfHUD 的 Application：绑好进程内读写通道之后待命。
  *
- * v1.6.10 起 GPU 采集不再等 XposedService 了。实测澎湃 OS 4 上 LSPosed 只注入
- * SystemUI，不注入模块自己这个进程，服务永远绑不上。采集改成照常跑，结果写本地
- * SharedPreferences，SystemUI 那边通过 exported ContentProvider 来读；
- * 服务要是能绑上，就顺带再写一份 RemotePreferences。
+ * 原版（NexusFloat）是 LSPosed 模块：App 进程采集 GPU、SystemUI 进程渲染监视条，
+ * 两边靠 RemotePreferences / ContentProvider / Settings.Global 三条通道传数据。
+ * 独立 App 化之后只剩一个进程，读写都在本地 SharedPreferences 上进行，
+ * 不再有任何跨进程通道。
+ *
+ * 采集不在 onCreate 里硬开：GpuCollectorWorker 按需求启停，
+ * OverlayService（悬浮条显示时）和设置界面（onStart）会各自声明需求。
  */
-public class App extends Application implements XposedServiceHelper.OnServiceListener {
-
-    private static volatile XposedService xposedService;
-
-    public static XposedService getXposedService() {
-        return xposedService;
-    }
+public class App extends Application {
 
     @Override
     public void onCreate() {
         super.onCreate();
-        // 本地写入通道要 Context，而且必须赶在采集线程起来之前
+        // 写入通道要 Context，而且必须赶在任何采集线程起来之前
         NexusRemoteWriter.bind(this);
-        XposedServiceHelper.registerListener(this);
-    }
-
-    /** Xposed 服务绑上了 → Remote 通道可用，顺便确认一下采集在跑 */
-    @Override
-    public void onServiceBind(XposedService service) {
-        xposedService = service;
-        GpuCollectorWorker.start();
-    }
-
-    /**
-     * 服务断开只把引用清掉，采集不停：本地通道还能用，
-     * 停掉的话 SystemUI 那边的 GPU 数据就凭空没了。
-     */
-    @Override
-    public void onServiceDied(XposedService service) {
-        xposedService = null;
+        NexusBridge.bind(this);
     }
 }

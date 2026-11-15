@@ -3,30 +3,20 @@ package com.jj.nexusfloat.service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 
-import com.jj.nexusfloat.collector.GpuCollectorWorker;
 import com.jj.nexusfloat.constant.Constants;
 import com.jj.nexusfloat.utils.LogUtils;
 
 /**
- * 开机自启（v1.8.0 加的），把模块进程拉起来直接开始 GPU 采集。
+ * 开机自启：直接把悬浮条宿主服务拉起来。
  *
- * 为什么需要它
- * GPU 频率/占用是模块 App 进程读 sysfs 之后写给 SystemUI 的（SystemUI 自己 su 不可靠）。
- * 重启后模块进程就没了，本来指望 SystemUI 的 resume 心跳通过 EarlyInitProvider 把它拉起来，
- * 但实测澎湃 OS 4 上这条链路时通时断（LSPosed 注入模块进程、Direct Boot 期间查 Provider
- * 都可能卡住），用户看到的就是「重启后 GPU 参数一直是旧值，手动打开一次 App 才恢复」。
+ * 原版开机只恢复 GPU 采集（渲染在 SystemUI 侧，随系统就绪自然出现）；
+ * 独立 App 化之后渲染也在自己进程里，所以开机要拉起的是 OverlayService。
+ * 悬浮权限没授时服务内部会按间隔重试，不用这里管。
  *
- * 为什么开机就采
- * 这里直接 setOverlayDemand(true)，不等 SystemUI 的心跳：
- * 监视条一般跟 SystemUI 一起出现，SystemUI 起来后每 30 拍发一次 resume 心跳维持 demand，
- * 不发 pause 就不会关；要是监视条在当前方向是关闭的，SystemUI 第一次 evaluate 就会发 pause，
- * 采集自动停下，多采的只是开机到 SystemUI 就绪之间那几秒；等心跳这个方案已经实测不可靠，
- * 它本身就是要修的那个 bug。
- *
- * 同时监听 LOCKED_BOOT_COMPLETED（Direct Boot 阶段就会触发）：未解锁时 root 读 sysfs 可能失败，
- * 但进程先起来、Provider 先注册，SystemUI 的心跳到了就不用再等冷启动。失败的那几拍
- * GpuCollectorWorker 自己的重试兜得住。
+ * 同时监听 LOCKED_BOOT_COMPLETED（Direct Boot 阶段触发）：未解锁阶段
+ * FGS 可能被系统拦一下，但 receiver 先注册，解锁后 START_STICKY 兜底。
  */
 public class BootReceiver extends BroadcastReceiver {
 
@@ -37,8 +27,24 @@ public class BootReceiver extends BroadcastReceiver {
             return;
         }
         LogUtils.i("BootReceiver: " + action);
-        GpuCollectorLauncher.startInProcess();
-        // 见类注释：先采着，SystemUI 的 pause 心跳会把它停回去
-        GpuCollectorWorker.setOverlayDemand(true);
+        // HUD 总开关关着就不拉服务：用户关掉的悬浮条不该开机自己冒出来
+        boolean hudEnabled = context.getSharedPreferences(
+                Constants.Remote.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.Modules.KEY_HUD_ENABLED, true);
+        if (!hudEnabled) {
+            LogUtils.i("BootReceiver: hud disabled, skip");
+            return;
+        }
+        try {
+            Intent service = new Intent(context, OverlayService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(service);
+            } else {
+                context.startService(service);
+            }
+        } catch (Throwable t) {
+            // Direct Boot / 精简 ROM 下可能暂时起不来，服务自己会重试
+            LogUtils.w("BootReceiver: start OverlayService failed", t);
+        }
     }
 }

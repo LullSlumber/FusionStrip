@@ -405,6 +405,13 @@ public final class Constants {
         public static final String LABEL_BACKGROUND = "背景";
 
         /**
+         * HUD 总开关（PerfHUD 新增）：false 时不启动悬浮条宿主服务，
+         * 整个监视条不显示、采集不跑。开机自启也要先看这个键。
+         */
+        public static final String KEY_HUD_ENABLED = "hud_enabled";
+        public static final String LABEL_HUD_ENABLED = "悬浮条";
+
+        /**
          * 「自动反色」开关：字色跟着背景明暗自动取反。
          *
          * 挂在「背景」下面当子项，但它对两种情形都有用：开了背景就按背景色决定字色，
@@ -1932,19 +1939,13 @@ public final class Constants {
         public static final String WINDOW_TITLE = "NexusFloatOverlay";
 
         /**
-         * 候选窗口类型，按优先级排，取第一个 addView 成功的。
+         * 候选窗口类型。
          *
-         * 2006 TYPE_SYSTEM_OVERLAY：system uid 专用，层级高于全屏应用，也不随状态栏隐藏。
-         * 2017 TYPE_SECURE_SYSTEM_OVERLAY：同样是 system-only，层级更高，
-         *      有些新系统收紧了 2006 之后仍然放行这个。
-         * 2038 TYPE_APPLICATION_OVERLAY：A8+ 的通用悬浮层，当主要回退。
-         * 2024 TYPE_NAVIGATION_BAR_PANEL：system-only，个别 ROM 只放行导航栏相关的类型。
-         * 2015 TYPE_STATUS_BAR_SUB_PANEL：最后兜底，个别 ROM 只放行状态栏相关的类型。
-         *
-         * 用字面量而不是常量引用：TYPE_SYSTEM_OVERLAY 已经被标废弃，
-         * 而且有些编译配置下引用 system-only 类型会触发 lint 报错。
+         * 独立 App 化之后不再有 system uid，只有 2038 TYPE_APPLICATION_OVERLAY
+         * 可用（需要用户授予「显示在其他应用上层」权限）。保留数组形态，
+         * probeWindowType 的探测逻辑不用改。
          */
-        public static final int[] WINDOW_TYPES = {2006, 2017, 2038, 2024, 2015};
+        public static final int[] WINDOW_TYPES = {2038};
 
         /**
          * 轮询间隔（毫秒）：检查竖屏/横屏开关有没有被 App 端改过。
