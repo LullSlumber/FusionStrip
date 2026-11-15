@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="dark" data-seed="indigo">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=contain">
 <meta name="theme-color" content="#10131A">
 <title>NexusFloat · WebUI 控制台</title>
 <!--
@@ -413,6 +413,14 @@ svg{display:block}
 }
 .status-cell small{font-size:10px;color:var(--md-sys-color-on-surface-variant)}
 .status-cell b{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.bridge-diag{
+  margin-top:11px;padding-top:10px;
+  border-top:1px solid var(--md-sys-color-outline);
+  font-size:10.5px;line-height:1.75;
+  color:var(--md-sys-color-on-surface-variant);
+  word-break:break-word;
+}
+.bridge-diag b{font-weight:600;color:var(--md-sys-color-on-surface)}
 
 /* ── 监视项目列表 ── */
 .mod-item{border-bottom:1px solid var(--md-sys-color-outline-variant)}
@@ -774,7 +782,7 @@ svg{display:block}
         <h1>NexusFloat</h1>
         <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
         <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.9</span>
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.10</span>
           <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
           <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
         </div>
@@ -799,6 +807,7 @@ svg{display:block}
             <div class="status-cell"><small>刷新间隔</small><b id="statInterval">1.0 s</b></div>
             <div class="status-cell"><small>启用项目</small><b id="statModules">4 / 11</b></div>
           </div>
+          <div class="bridge-diag" id="bridgeDiag">设置通道检测中…</div>
         </div>
 
         <div class="group-title">显示时机</div>
@@ -1226,10 +1235,12 @@ const DEFAULTS = {
   mod_gpu:true, mod_gpu_freq:false, mod_ram:false, mod_zram:false,
   mod_temp:false, mod_power:true, mod_current:false, mod_fps:true,
   mod_cpu_temp:false, mod_net:false,
-  // 自定义名称（空 = 显示 Lucide 图标）
-  name_mod_cpu:'', name_mod_gpu:'', name_mod_ram:'', name_mod_zram:'',
-  name_mod_temp:'', name_mod_power:'', name_mod_current:'', name_mod_fps:'',
-  name_mod_cpu_temp:'', name_mod_net:'',
+  /* 自定义名称必须与 Constants.Modules.DEFAULT_NAMES 逐项一致。
+     MonitorView.applyName() 只在「名称 == 默认名」时画矢量图标，名称为空会连
+     图标带文字一起 GONE —— 早期版本这里写成空串，装上去状态栏就只剩裸数值。 */
+  name_mod_cpu:'C', name_mod_gpu:'G', name_mod_ram:'R', name_mod_zram:'Z',
+  name_mod_temp:'T', name_mod_power:'P', name_mod_current:'I', name_mod_fps:'F',
+  name_mod_cpu_temp:'CT', name_mod_net:'N',
   // 顺序与空格
   module_order:'0,2,4,6,7,8,9,10,11,12,13', space_before:'',
   // 外观
@@ -1279,6 +1290,10 @@ const ui = {tab:'status', orient:'portrait', playing:true, seed:'indigo', mode:'
 
 const hasNative = () => (typeof window.NF !== 'undefined' && window.NF) ? window.NF : null;
 
+/* 设备侧已知配置镜像。用 baseline 算 diff 会在「改了又改回原值」时漏提交，
+   所以单独维护一份：只有 commit 成功才推进，失败下次自动重试。 */
+let deviceState = null;
+
 const NFBridge = {
   /* 两套后端共用同一套交互：
      · 浏览器 / 设计预览    → localStorage 演示
@@ -1302,7 +1317,20 @@ const NFBridge = {
   write(s,b){
     try{ localStorage.setItem(LS_KEY, JSON.stringify({state:s, baseline:b, ui:ui})); }catch(e){}
     const nf = hasNative();
-    if(nf){ try{ nf.commit(JSON.stringify(s)); }catch(e){} }
+    if(!nf) return;
+    /* 只提交「相对设备真实配置变了」的键。绝不能把整套 DEFAULTS 全量灌进 perf 表：
+       那会覆盖用户原有设置，且把 name_mod_* 写成空串导致 HUD 图标消失。
+       值改回项目默认时传 null —— 桥接层删掉该键，让 NexusBridge 走内置默认值。 */
+    const dev = deviceState || {...DEFAULTS};
+    const diff = {};
+    for(const k of Object.keys(DEFAULTS)){
+      if(String(s[k]) === String(dev[k])) continue;
+      diff[k] = (String(s[k]) === String(DEFAULTS[k])) ? null : s[k];
+    }
+    if(Object.keys(diff).length === 0) return;
+    let ok = false;
+    try{ ok = !!nf.commit(JSON.stringify(diff)); }catch(e){}
+    if(ok) deviceState = {...s};
   },
   publish(lines){
     const nf = hasNative();
@@ -1319,6 +1347,11 @@ const NFBridge = {
     if(!nf || !nf.gpuInfo) return null;
     try{ return JSON.parse(nf.gpuInfo()); }catch(e){ return null; }
   },
+  diag(){
+    const nf = hasNative();
+    if(!nf || !nf.diag) return null;
+    try{ return JSON.parse(nf.diag()); }catch(e){ return null; }
+  },
   toast(msg){
     const nf = hasNative();
     if(nf && nf.toast){ try{ nf.toast(msg); return; }catch(e){} }
@@ -1334,6 +1367,7 @@ function load(){
   if(d.state) state = {...DEFAULTS, ...d.state};
   if(d.baseline) baseline = {...DEFAULTS, ...d.baseline};
   if(d.ui) Object.assign(ui, d.ui);
+  deviceState = hasNative() ? {...state} : null;
 }
 function persist(){ NFBridge.write(state, baseline); }
 function setKey(k,v){ state[k]=v; onStateChange(); }
@@ -1725,6 +1759,26 @@ function startGpuPolling(){
   setInterval(()=>apply(NFBridge.gpuInfo()), 1000);
 }
 
+/* ───────────── 设置通道诊断（只在 App WebView 内有值） ───────────── */
+function startDiagPolling(){
+  const el = document.getElementById('bridgeDiag');
+  if(!el) return;
+  const render = d=>{
+    if(!d){ el.innerHTML = '浏览器预览 · 未连接设备设置通道'; return; }
+    const flag = v => v ? '✓' : '✗';
+    const ago = d.lastPublishAt
+      ? Math.max(0, Math.round((Date.now() - d.lastPublishAt)/1000)) + ' 秒前'
+      : '尚未发布';
+    el.innerHTML =
+      `本地表 <b>${d.localKeys}</b> 键 · Remote <b>${flag(d.remote)}</b> · ` +
+      `Root <b>${flag(d.root)}</b> · Global 快照 <b>${d.globalChars}</b> 字符<br>` +
+      `上次整表发布 <b>${d.lastPublishOk ? '成功' : '未成功'}</b>（${ago}）` +
+      (d.lastPublishOk ? '' : ' · 改动不生效时优先检查 root 授权');
+  };
+  render(NFBridge.diag());
+  setInterval(()=>render(NFBridge.diag()), 2000);
+}
+
 /* ───────────────── 应用白名单选择器 ───────────────── */
 let appPickerData = [];
 function currentWhitelist(){
@@ -1811,6 +1865,7 @@ function init(){
   syncInputs();
   restartSim();
   startGpuPolling();
+  startDiagPolling();
   bindAppPicker();
 
   // 导航
