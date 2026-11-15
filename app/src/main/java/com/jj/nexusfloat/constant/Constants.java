@@ -1792,7 +1792,7 @@ public final class Constants {
         public static final float DIVIDER_STEP_DP = 1f;
         public static final float BAR_HORIZONTAL_MARGIN_DP = 2f;
         public static final float CPU_BAR_WIDTH_DP = 24f;
-        public static final float GPU_BAR_WIDTH_DP = 5f;
+        public static final float GPU_BAR_WIDTH_DP = 4f;
         public static final float BAR_HEIGHT_DP = 6f;
         public static final float BAR_SPACING_PX = 2f;
         public static final float BAR_HIGH_USAGE_THRESHOLD = 85f;

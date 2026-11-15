@@ -10,7 +10,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * 监视条内置字体加载器（v1.9.4-lull.4）。
+ * 监视条内置字体加载器（v1.9.4-lull.7）。
  *
  * 原版监视条所有文字固定 Typeface.MONOSPACE，在设备上实际显示的是系统等宽字体，
  * 跟用户在别的界面看到的字体不一致。这里把字体文件打进模块 APK 的 assets
@@ -24,10 +24,14 @@ import java.util.zip.ZipFile;
  *
  * 任何一步失败都保持 null：MonitorView 拿到 null 会回退到原来的
  * MONOSPACE 行为，监视条不至于白屏。
+ *
+ * 字重语义（lull.7）：get(true) 只在有真粗体文件时返回非 null——
+ * 调用方拿到 null 就走 MONOSPACE+BOLD 的老路，绝不拿常规字重的
+ * Typeface 去凑加粗位。而且调用方拿到非 null 后直接 setTypeface(tf)
+ * 不带样式：createFromFile 出来的样式标记是常规，再传 BOLD 会触发
+ * Skia 伪加粗（描边涂抹），笔画发糊发胀，真机已验证。
  */
 public final class MonitorTypeface {
-
-    private static final String TAG = "NexusFloatFont";
 
     private static Typeface sRegular;
     private static Typeface sBold;
@@ -39,28 +43,18 @@ public final class MonitorTypeface {
     /**
      * 从模块 APK 里解出并加载字体。重复调用无害（只生效一次）。
      *
-     * v1.9.4-lull.6：每一步都打 logcat（tag NexusFloatFont）。真机上出现过
-     * 「内置字体没生效但监视条正常显示」的无声失败，没有日志没法定位是哪一环
-     * 断了（APK 读不了 / entry 不在 / cache 写不进 / createFromFile 抛）。
-     *
      * @param moduleApkPath 模块自身 APK 的绝对路径（ApplicationInfo.sourceDir）
      * @param cacheDir      写释放文件的目录（SystemUI 的 cache 目录）
      */
     public static void load(String moduleApkPath, File cacheDir) {
         if (sAttempted || moduleApkPath == null || cacheDir == null) {
-            android.util.Log.i(TAG, "load skipped: attempted=" + sAttempted
-                    + " apk=" + moduleApkPath + " cache=" + cacheDir);
             return;
         }
         sAttempted = true;
-        android.util.Log.i(TAG, "load start: apk=" + moduleApkPath
-                + " exists=" + new File(moduleApkPath).canRead()
-                + " cache=" + cacheDir);
         File regular = extractFromApk(moduleApkPath,
                 "assets/segoeui.ttf", new File(cacheDir, "nf_segoeui.ttf"));
         File bold = extractFromApk(moduleApkPath,
                 "assets/segoeuib.ttf", new File(cacheDir, "nf_segoeuib.ttf"));
-        android.util.Log.i(TAG, "extracted: regular=" + regular + " bold=" + bold);
         try {
             if (regular != null) {
                 sRegular = Typeface.createFromFile(regular);
@@ -68,21 +62,19 @@ public final class MonitorTypeface {
             if (bold != null) {
                 sBold = Typeface.createFromFile(bold);
             }
-            android.util.Log.i(TAG, "typeface loaded: regular=" + (sRegular != null)
-                    + " bold=" + (sBold != null));
-        } catch (Throwable t) {
-            android.util.Log.e(TAG, "createFromFile failed", t);
+        } catch (Throwable ignored) {
+            // 字体文件损坏之类的情况：保持 null，回退等宽
         }
     }
 
     /**
-     * 取当前字重要用的字体；没加载成功返回 null，调用方回退 Typeface.MONOSPACE。
+     * 取当前字重要用的字体。
+     *
+     * bold=true 时只有真粗体文件在场才返回，否则返回 null 让调用方
+     * 回退 MONOSPACE+BOLD；bold=false 时返回常规体（可能为 null）。
      */
     public static Typeface get(boolean bold) {
-        if (bold) {
-            return sBold != null ? sBold : sRegular;
-        }
-        return sRegular;
+        return bold ? sBold : sRegular;
     }
 
     /** 从 APK 里解出一个 entry 到目标文件，失败返回 null */
