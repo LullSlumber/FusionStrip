@@ -792,7 +792,7 @@ svg{display:block}
         <h1>NexusFloat</h1>
         <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
         <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.11</span>
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.13</span>
           <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
           <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
         </div>
@@ -865,7 +865,7 @@ svg{display:block}
         <div class="card">
           <div class="row">
             <span class="row-icon" data-icon="refresh"></span>
-            <div class="row-text"><b>重启系统界面</b><small>改动外观后需重启 SystemUI 生效</small></div>
+            <div class="row-text"><b>重启系统界面</b><small>重载 SystemUI Hook · 设置本身约 1 秒热更</small></div>
             <button class="tonal-btn" data-action="restart">重启</button>
           </div>
           <p class="card-note">监视条是独立悬浮窗，横屏全屏场景不依赖下拉状态栏。GPU 数据需要 root；管理器未授权时其余指标照常工作。</p>
@@ -1362,6 +1362,13 @@ const NFBridge = {
     if(!nf || !nf.diag) return null;
     try{ return JSON.parse(nf.diag()); }catch(e){ return null; }
   },
+  /* 重启 SystemUI：走原生 NFPrefsBridge.restartSystemUi()（root 命令），
+     结果异步由 window.NFRestartResult 回推。浏览器预览没有原生桥 → false。 */
+  restartSystemUi(){
+    const nf = hasNative();
+    if(!nf || !nf.restartSystemUi) return false;
+    try{ return !!nf.restartSystemUi(); }catch(e){ return false; }
+  },
   toast(msg){
     const nf = hasNative();
     if(nf && nf.toast){ try{ nf.toast(msg); return; }catch(e){} }
@@ -1755,6 +1762,19 @@ function toast(msg){
   clearTimeout(el._t);
   el._t = setTimeout(()=>{el.hidden = true;}, 2600);
 }
+
+/* 原生重启 SystemUI 的异步结果（NFPrefsBridge 用 evaluateJavascript 回推）。
+   带 PID 前后对比，避免再出现「点了没反应也不知道为什么」。 */
+window.NFRestartResult = function(r){
+  if(!r) return;
+  let msg;
+  if(r.restarted)          msg = 'SystemUI 已重启 · PID ' + (r.before||'?') + ' → ' + (r.after||'?');
+  else if(!r.ok)           msg = '重启失败 · ' + (r.detail || 'root 命令未执行，请检查授权');
+  else                     msg = '已发送重启指令 · ' + (r.detail || '请观察状态栏是否重建');
+  if(r.publishOk === false) msg += ' · 设置发布未成功';
+  toast(msg);
+};
+
 function switchTab(tab){
   ui.tab = tab; persist();
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
@@ -1989,7 +2009,10 @@ function init(){
     if(a === 'resetOffset'){
       state.offset_x = 0; state.offset_y = 0; onStateChange(); toast('位置已复位');
     }
-    if(a === 'restart') toast('已发送重启系统界面指令（演示）');
+    if(a === 'restart'){
+      if(!NFBridge.restartSystemUi()){ toast('重启 SystemUI 仅在 App 内可用'); return; }
+      toast('正在重启 SystemUI…（约 2 秒后回报结果）');
+    }
   });
 
   // 应用 / 复制 / dialog

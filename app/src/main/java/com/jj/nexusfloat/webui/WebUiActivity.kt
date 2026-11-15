@@ -123,6 +123,17 @@ class WebUiActivity : Activity() {
         )
     }
 
+    /** 供桥接层把异步结果回推给页面；evaluateJavascript 必须在主线程调用 */
+    fun runJs(script: String) {
+        runOnUiThread {
+            try {
+                webView.evaluateJavascript(script, null)
+            } catch (t: Throwable) {
+                // Activity 已销毁 / WebView 已 destroy 时丢弃结果即可
+            }
+        }
+    }
+
     /** 两张系统栏都改透明；API 29+ 顺手关掉系统的对比度遮罩 */
     private fun applyTransparentBars() {
         @Suppress("DEPRECATION")

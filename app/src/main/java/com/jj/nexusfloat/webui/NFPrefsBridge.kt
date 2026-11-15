@@ -11,6 +11,7 @@ import com.jj.nexusfloat.bridge.SettingsChannel
 import com.jj.nexusfloat.constant.Constants
 import com.jj.nexusfloat.stats.StatsService
 import com.jj.nexusfloat.utils.LogUtils
+import com.jj.nexusfloat.utils.ExecUtils
 import com.jj.nexusfloat.utils.RootShell
 import org.json.JSONObject
 import java.lang.ref.WeakReference
@@ -37,6 +38,28 @@ class NFPrefsBridge(private val context: Context) {
         private const val TAG = "NFPrefsBridge"
         private const val PUBLISH_DEBOUNCE_MS = 150L
         private const val NAME_PREFIX = "name_"
+
+        /**
+         * 重启 SystemUI 用的包名与命令。
+         *
+         * 原 Compose 界面用的是
+         *   killall com.android.systemui || pkill -f com.android.systemui
+         * 两个都不太可靠：toybox killall 按 /proc/pid/comm 匹配，而 comm 被内核
+         * 截断到 15 字符（com.android.syst），长包名基本匹配不上；pkill -f 的
+         * 模式又会命中「正在执行这条命令的 shell 自己」，把自己的 shell 杀掉。
+         *
+         * 这里改成：pidof 拿 PID → kill 具体数字 → 1.8s 后再取一次 PID 对比。
+         * pidof 拿不到时才退回 pkill -f，并用 '[c]om...' 这个字符类技巧让
+         * 命令行字面串不等于正则要匹配的目标串，避免自杀。
+         */
+        private const val SYSUI_PKG = "com.android.systemui"
+        private val PIDOF_CMD = "pidof " + SYSUI_PKG + " 2>/dev/null; echo __NF_END"
+        // 单独一条命令、且用 [c] 字符类：整条命令行里不出现连续的
+        // "com.android.systemui"，正则就不会命中执行它的 shell 自身。
+        private val PGREP_CMD =
+            "pgrep -f '[c]om.android.systemui' 2>/dev/null; echo __NF_END"
+        private val PKILL_CMD =
+            "pkill -f '[c]om.android.systemui' 2>/dev/null; echo __NF_DONE"
 
         /**
          * WebUI 认识的 58 个键（对齐 app.js 的 DEFAULTS）。
@@ -316,6 +339,107 @@ class NFPrefsBridge(private val context: Context) {
             }
         }
     }
+
+    /**
+     * 真正重启 SystemUI（WebUI「维护」卡的重启按钮）。
+     *
+     * 异步执行：JS 调用后立刻返回，root 命令跑完再由 WebView 回推
+     * window.NFRestartResult({...})，页面据此显示「已重启 / root 不可用 / 进程没变」。
+     * 同步阻塞 JS 会让界面卡好几秒，而且 su 命令必须在主线程之外跑。
+     *
+     * 顺序上先补推一次整表：SystemUI 重启后会重新读 Settings.Global 快照，
+     * 别让用户刚改完的设置因为防抖窗口没发完而丢失。
+     */
+    @JavascriptInterface
+    fun restartSystemUi(): Boolean {
+        Thread {
+            val publishOk = try {
+                cancelPending()
+                publishNow()
+            } catch (t: Throwable) {
+                LogUtils.w("$TAG restart publish failed", t)
+                false
+            }
+
+            val before = readSysUiPid()
+            // 命令里只出现具体 PID 数字，不含包名串 —— pkill 回退时才不会有
+            // 「模式命中自己 shell」的问题（见 companion object 里的说明）。
+            val killOut = try {
+                if (before.isNotEmpty()) {
+                    ExecUtils.exec("kill $before 2>/dev/null; echo __NF_KILLED")
+                } else {
+                    ExecUtils.exec(PKILL_CMD)
+                }
+            } catch (t: Throwable) {
+                LogUtils.w("$TAG restart kill failed", t)
+                null
+            }
+
+            // 给 system_server 拉起 SystemUI 的时间，再用 PID 变化当「真重启了」的证据
+            try {
+                Thread.sleep(1800)
+            } catch (ignored: InterruptedException) {
+            }
+            val after = readSysUiPid()
+            val rootOk = killOut != null
+            val pidVerified = before.isNotEmpty() && after.isNotEmpty()
+            val restarted = pidVerified && before != after
+
+            val detail = when {
+                !rootOk -> "root 命令未执行（管理器未授权？）"
+                restarted -> "PID $before → $after"
+                !pidVerified -> "已执行重启，但此 ROM 读不到 SystemUI PID；看状态栏是否闪一下"
+                before.isNotEmpty() && after.isEmpty() -> "进程被杀但未重新拉起"
+                else -> "PID 未变化（$before）· 系统可能拦截了 kill"
+            }
+
+            val result = JSONObject()
+                .put("ok", rootOk)
+                .put("restarted", restarted)
+                .put("publishOk", publishOk)
+                .put("before", before)
+                .put("after", after)
+                .put("detail", detail)
+                .toString()
+            LogUtils.i("$TAG restartSystemUi: $result")
+            activityRef?.get()?.runJs(
+                "window.NFRestartResult&&NFRestartResult($result)"
+            )
+        }.start()
+        return true
+    }
+
+    /**
+     * 读 SystemUI 的 PID。toybox pidof 按 comm（内核截断到 15 字符）匹配，
+     * 有些 ROM 上长包名取不到，这时单独再跑一次 pgrep -f 按完整 cmdline 找。
+     * su 不可用 / 进程不存在时返回空串。
+     */
+    private fun readSysUiPid(): String {
+        val out = try {
+            ExecUtils.exec(PIDOF_CMD)
+        } catch (t: Throwable) {
+            null
+        } ?: return ""
+        val pid = parsePidLines(out)
+        if (pid.isNotEmpty()) return pid
+        val pgrep = try {
+            ExecUtils.exec(PGREP_CMD)
+        } catch (t: Throwable) {
+            null
+        } ?: return ""
+        return parsePidLines(pgrep)
+    }
+
+    /** 从命令输出里挑出纯数字行，统一成空格分隔的 PID 串 */
+    private fun parsePidLines(out: String): String = out.lines()
+        .map { it.trim() }
+        .filter { line ->
+            line.isNotEmpty() && line != "__NF_END" &&
+                    line.all { c -> c.isDigit() || c == ' ' }
+        }
+        .joinToString(" ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
 
     private fun schedulePublish() {
         cancelPending()
