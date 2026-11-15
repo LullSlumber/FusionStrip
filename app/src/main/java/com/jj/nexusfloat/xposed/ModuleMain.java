@@ -18,6 +18,7 @@ import com.jj.nexusfloat.bridge.StatusBarTintBridge;
 import com.jj.nexusfloat.constant.Constants;
 import com.jj.nexusfloat.service.GpuCollectorLauncher;
 import com.jj.nexusfloat.ui.MonitorOverlay;
+import com.jj.nexusfloat.ui.view.MonitorTypeface;
 import com.jj.nexusfloat.ui.view.MonitorView;
 import com.jj.nexusfloat.utils.LogUtils;
 import com.jj.nexusfloat.utils.ReflectUtils;
@@ -450,6 +451,14 @@ public class ModuleMain extends XposedModule {
         // 把模块进程唤醒，保证 GPU root 采集和 Remote 写入在跑
         // 必须等用户解锁之后才能拉起来（免得 Direct Boot 下系统把 Provider 查询堵住）
         wakeCollectorSafely(context);
+
+        // 监视条内置字体（v1.9.4-lull.4）：从模块 APK 解出 Segoe UI 落到
+        // SystemUI cache 目录再加载，失败时 MonitorView 自动回退等宽字体
+        try {
+            MonitorTypeface.load(getModuleApplicationInfo().sourceDir, context.getCacheDir());
+        } catch (Throwable t) {
+            LogUtils.xposed(this, Log.WARN, "MonitorTypeface load failed", t);
+        }
 
         monitorView = new MonitorView(context);
         // 先按用户设定的字号来，后面窗口/布局高度才能按实际字号算

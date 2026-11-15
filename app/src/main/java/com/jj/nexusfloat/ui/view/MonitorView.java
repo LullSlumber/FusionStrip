@@ -559,7 +559,9 @@ public class MonitorView extends LinearLayout {
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp);
         // v1.8.9：粗细看 fontBold，默认加粗跟旧版一致
-        tv.setTypeface(Typeface.MONOSPACE,
+        // v1.9.4-lull.4：内置字体（Segoe UI）加载成功就用它，失败回退等宽
+        Typeface typeface = MonitorTypeface.get(fontBold);
+        tv.setTypeface(typeface != null ? typeface : Typeface.MONOSPACE,
                 fontBold ? Typeface.BOLD : Typeface.NORMAL);
         // v1.8.6：把 font padding 恢复回来。去掉之后中文名称（fallback 到 CJK 字体）
         // 的 ascent 偏大、字形视觉上往下掉，跟旁边的数字不在一条水平线上。
@@ -581,8 +583,9 @@ public class MonitorView extends LinearLayout {
             return false;
         }
         fontBold = bold;
+        Typeface typeface = MonitorTypeface.get(bold);
         for (int i = 0; i < allTexts.size(); i++) {
-            allTexts.get(i).setTypeface(Typeface.MONOSPACE,
+            allTexts.get(i).setTypeface(typeface != null ? typeface : Typeface.MONOSPACE,
                     fontBold ? Typeface.BOLD : Typeface.NORMAL);
         }
         // 图标线条粗细跟字体加粗联动：加粗 2.25 / 常规 2（24 视口单位）
@@ -825,11 +828,13 @@ public class MonitorView extends LinearLayout {
         requestLayout();
     }
 
-    /** 当前字号下单个空格（MONOSPACE）有多宽，单位像素 */
+    /** 当前字号下单个空格（当前生效的字体，默认等宽）有多宽，单位像素 */
     private int measureSpaceWidthPx() {
         TextView probe = new TextView(getContext());
         probe.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp);
-        probe.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        // 测量探针必须跟实际显示的字体一致，列间距才不会跟着字体变
+        Typeface typeface = MonitorTypeface.get(true);
+        probe.setTypeface(typeface != null ? typeface : Typeface.MONOSPACE, Typeface.BOLD);
         probe.setText(" ");
         return (int) Math.ceil(probe.getPaint().measureText(" "));
     }
