@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="dark" data-seed="indigo">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=contain">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#10131A">
 <title>NexusFloat · WebUI 控制台</title>
 <!--
@@ -109,6 +109,9 @@ html[data-theme="light"]{
 
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
+/* 系统栏安全区：WebView 全屏 edge-to-edge 时由原生经 window.NFInsets 注入，
+   浏览器预览保持 0 */
+:root{--nf-sat:0px;--nf-sab:0px}
 html,body{height:100%}
 body{
   margin:0;
@@ -145,13 +148,18 @@ svg{display:block}
   border-right:1px solid var(--md-sys-color-outline-variant);
 }
 .topbar{
-  flex:none;height:64px;display:flex;align-items:center;gap:8px;padding:0 16px;
-  background:var(--md-sys-color-surface);
+  flex:none;height:calc(64px + var(--nf-sat));display:flex;align-items:center;gap:8px;
+  padding:var(--nf-sat) 16px 0;
+  background:color-mix(in srgb,var(--md-sys-color-surface) 72%,transparent);
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
   border-bottom:1px solid transparent;
   transition:background .25s var(--md-sys-ease),border-color .25s var(--md-sys-ease);
   z-index:12;
 }
-.topbar.scrolled{background:var(--md-sys-color-surface-container);border-color:var(--md-sys-color-outline-variant)}
+.topbar.scrolled{
+  background:color-mix(in srgb,var(--md-sys-color-surface-container) 84%,transparent);
+  border-color:var(--md-sys-color-outline-variant)
+}
 .brand-mark{
   width:34px;height:34px;flex:none;border-radius:11px;display:grid;place-items:center;
   background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);
@@ -480,8 +488,9 @@ svg{display:block}
 /* ── 底部导航 / FAB ── */
 .navbar{
   flex:none;display:grid;grid-template-columns:repeat(4,1fr);
-  height:78px;padding:8px 8px 10px;
-  background:var(--md-sys-color-surface-container);
+  height:calc(78px + var(--nf-sab));padding:8px 8px calc(10px + var(--nf-sab));
+  background:color-mix(in srgb,var(--md-sys-color-surface-container) 80%,transparent);
+  -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
   border-top:1px solid var(--md-sys-color-outline-variant);
   z-index:11;
 }
@@ -726,8 +735,9 @@ svg{display:block}
   .shell{display:flex;flex-direction:column;height:auto;min-height:100dvh;max-width:560px;overflow:visible}
   .stage{
     order:-1;position:sticky;top:0;z-index:30;overflow:visible;
-    padding:12px 14px 10px;gap:8px;
-    background:var(--md-sys-color-surface-container-low);
+    padding:calc(12px + var(--nf-sat)) 14px 10px;gap:8px;
+    background:color-mix(in srgb,var(--md-sys-color-surface-container-low) 82%,transparent);
+    -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
     border-bottom:1px solid var(--md-sys-color-outline-variant);
     box-shadow:0 6px 18px rgba(0,0,0,.18);
   }
@@ -744,8 +754,8 @@ svg{display:block}
   .webui{overflow:visible;border-right:0;min-height:0}
   .scroll{overflow:visible;padding:0 14px 20px}
   .navbar{position:sticky;bottom:0}
-  .fab-holder{position:fixed;bottom:92px;right:14px}
-  .topbar{position:sticky;top:0;background:var(--md-sys-color-surface)}
+  .fab-holder{position:fixed;bottom:calc(92px + var(--nf-sab));right:14px}
+  .topbar{position:sticky;top:0}
 }
 
 @media (max-width:420px){
@@ -782,7 +792,7 @@ svg{display:block}
         <h1>NexusFloat</h1>
         <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
         <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.10</span>
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.11</span>
           <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
           <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
         </div>
@@ -1436,7 +1446,18 @@ function resolveTheme(){
             || (ui.mode === 'auto' && !matchMedia('(prefers-color-scheme: light)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   applyPalette();
+  // 原生 WebView 里系统栏已透明：浅色页面把状态栏图标换成深色，否则看不见
+  try{ window.NF && NF.setLightBars && NF.setLightBars(!dark); }catch(e){}
 }
+
+/* 原生 edge-to-edge：WebUiActivity 把系统栏 insets 转发进来（单位 px），
+   写成 CSS 变量后顶栏 / 底栏 / FAB 自动让出状态栏和手势条区域。
+   浏览器预览里没人调用它，变量保持 0。 */
+window.NFInsets = function(top, bottom){
+  const root = document.documentElement;
+  root.style.setProperty('--nf-sat', (top|0) + 'px');
+  root.style.setProperty('--nf-sab', (bottom|0) + 'px');
+};
 
 /* ───────────────────────── 5. 控件同步 ───────────────────────── */
 function fmtSlider(k,v){
@@ -1769,8 +1790,12 @@ function startDiagPolling(){
     const ago = d.lastPublishAt
       ? Math.max(0, Math.round((Date.now() - d.lastPublishAt)/1000)) + ' 秒前'
       : '尚未发布';
+    // 空名称键：旧版全量写回的脏数据，不为 0 时 HUD 不画图标
+    const bad = d.emptyNames > 0
+      ? ` · <b style="color:var(--md-sys-color-error)">脏名称键 ${d.emptyNames}</b>`
+      : '';
     el.innerHTML =
-      `本地表 <b>${d.localKeys}</b> 键 · Remote <b>${flag(d.remote)}</b> · ` +
+      `本地表 <b>${d.localKeys}</b> 键${bad} · Remote <b>${flag(d.remote)}</b> · ` +
       `Root <b>${flag(d.root)}</b> · Global 快照 <b>${d.globalChars}</b> 字符<br>` +
       `上次整表发布 <b>${d.lastPublishOk ? '成功' : '未成功'}</b>（${ago}）` +
       (d.lastPublishOk ? '' : ' · 改动不生效时优先检查 root 授权');

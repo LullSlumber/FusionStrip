@@ -1,5 +1,6 @@
 package com.jj.nexusfloat.webui
 
+import android.app.Activity
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -13,6 +14,7 @@ import com.jj.nexusfloat.stats.StatsService
 import com.jj.nexusfloat.utils.LogUtils
 import com.jj.nexusfloat.utils.RootShell
 import org.json.JSONObject
+import java.lang.ref.WeakReference
 
 /**
  * WebUI ↔ 模块设置表的桥接层，注入名 "NF"。
@@ -79,6 +81,13 @@ class NFPrefsBridge(private val context: Context) {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingPublish: Runnable? = null
+
+    /** WebUiActivity 弱引用：页面切浅色主题时要联动系统栏图标颜色 */
+    private var activityRef: WeakReference<Activity>? = null
+
+    fun attachActivity(activity: Activity?) {
+        activityRef = activity?.let { WeakReference(it) }
+    }
 
     @Volatile private var lastPublishOk = false
     @Volatile private var lastPublishAt = 0L
@@ -259,17 +268,36 @@ class NFPrefsBridge(private val context: Context) {
         catch (t: Throwable) { o.put("root", false) }
         try {
             o.put("localKeys", prefs().getAll().size)
+            // 空名称键 = 旧版 WebUI 全量写回留下的脏数据，会让 HUD 不画图标。
+            // 数量不为 0 说明 migrate 没跑成（进程没起来过 onCreate）。
+            o.put("emptyNames", prefs().all.count { (k, v) ->
+                k.startsWith(NAME_PREFIX) && v is String && v.isEmpty()
+            })
             val raw = Settings.Global.getString(
                 context.contentResolver, Constants.Component.SETTINGS_KEY
             )
             o.put("globalChars", raw?.length ?: 0)
         } catch (t: Throwable) {
             o.put("localKeys", -1)
+            o.put("emptyNames", -1)
             o.put("globalChars", -1)
         }
         o.put("lastPublishOk", lastPublishOk)
         o.put("lastPublishAt", lastPublishAt)
         return o.toString()
+    }
+
+    /** 页面切浅色主题时联动系统栏图标颜色（深色主题传 false） */
+    @JavascriptInterface
+    fun setLightBars(light: Boolean) {
+        val act = activityRef?.get() ?: return
+        mainHandler.post {
+            try {
+                act.setSystemBarsLight(light)
+            } catch (t: Throwable) {
+                LogUtils.w("$TAG setLightBars failed", t)
+            }
+        }
     }
 
     @JavascriptInterface
