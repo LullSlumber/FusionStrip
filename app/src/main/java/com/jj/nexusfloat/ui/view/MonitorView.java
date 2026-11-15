@@ -316,10 +316,8 @@ public class MonitorView extends LinearLayout {
 
         collector = new PerformanceCollector(context, this::updateData);
 
-        // 强调线初值：直读一层设置快照，注入后第一轮 syncModuleFlags 会再对齐一次
+        // 强调线：默认开/琥珀，注入后第一轮 syncModuleFlags 会按用户设置对齐
         stripLinePaint.setColor(stripLineColor);
-        stripLineEnabled = NexusBridge.isStripLineEnabled();
-        setStripLineColorIndex(NexusBridge.getStripLineColorIndex());
     }
 
     /** 顶层模块：分隔条并进本组，整组藏起来时分隔条一起没，模块间距不留空 */
