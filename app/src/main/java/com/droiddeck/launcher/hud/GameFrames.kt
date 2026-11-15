@@ -4,8 +4,8 @@ import java.io.File
 import java.io.RandomAccessFile
 import kotlin.math.roundToInt
 
-// FusionStrip 移植适配：internal 基础上加 open，允许 com.jj.nexusfloat.hud.FpsBridgeFrameStats
-// 把 NexusFloat 每拍采到的 fps/1% low 桥接进来（原文件其余逻辑未动）。
+// FusionStrip 绉绘閫傞厤锛歩nternal 鍩虹涓婂姞 open锛屽厑璁?com.jj.nexusfloat.hud.FpsBridgeFrameStats
+// 鎶?NexusFloat 姣忔媿閲囧埌鐨?fps/1% low 妗ユ帴杩涙潵锛堝師鏂囦欢鍏朵綑閫昏緫鏈姩锛夈€?
 internal open class FrameStats {
     private val graph = FloatArray(GRAPH_FRAMES)
     private var graphHead = 0
@@ -28,13 +28,13 @@ internal open class FrameStats {
     private var slowSize = 0
 
     @Volatile open var fps = 0f
-        private set
+        internal set
 
     @Volatile var fpsUpdates = 0L
-        private set
+        internal set
 
     @Volatile var count = 0L
-        private set
+        internal set
 
     @Synchronized
     open fun add(frametimeNs: Long, timeNs: Long) {

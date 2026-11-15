@@ -13,7 +13,7 @@ import com.droiddeck.launcher.hud.FrameStats
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-class FpsBridgeFrameStats : FrameStats() {
+internal class FpsBridgeFrameStats : FrameStats() {
 
     private val lock = Any()
     private var bridgedFps = 0f
