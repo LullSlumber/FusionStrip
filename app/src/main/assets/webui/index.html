@@ -1,0 +1,1941 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark" data-seed="indigo">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10131A">
+<title>NexusFloat · WebUI 控制台</title>
+<!--
+  ═══════════════════════════════════════════════════════════════════════════
+  NexusFloat · KSU WebUI 风格设置界面【全新设计稿】
+  ───────────────────────────────────────────────────────────────────────────────
+  · 独立设计，不复用 FusionStrip 任何设计稿 / 样式 / 组件代码。
+  · 视觉：Material Design 3 (Material You)，--md-sys-color-* 全套 token；
+    宿主（KSU 管理器）若注入了动态取色变量则自动优先使用。
+  · 组件：TopAppBar / LargeTitle / NavigationBar / ListItem / Card / Switch /
+    Slider / SegmentedButton / FilterChip / ColorSwatch / ExtendedFAB /
+    Dialog / Snackbar / TextField。
+  · 字段：全部对齐 Constants.java + NexusBridge.java（SharedPreferences "perf"），
+    键名、类型 (b/i/f/s)、默认值、范围、互斥联动逐项一致。
+  · 核心交互：右侧「状态栏舞台」实时渲染监视条，任何设置改动立即所见即所得。
+  · 接入点：app.js 里的 NFBridge。浏览器 = localStorage 演示；KSU WebView =
+    window.ksu.exec / addJavascriptInterface 写 perf 表并 publishSettings()。
+  ═══════════════════════════════════════════════════════════════════════════
+-->
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   NexusFloat WebUI · Material Design 3 token 层
+   宿主（KSU 管理器）若在 <html style> 注入 --md-sys-color-* 动态取色，
+   app.js 会跳过本地 seed 覆盖，直接沿用系统壁纸色。
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root{
+  /* 深色 · seed indigo（fallback，JS 会按主题/种子刷新） */
+  --md-sys-color-primary:#A8C7FF;
+  --md-sys-color-on-primary:#0A305F;
+  --md-sys-color-primary-container:#284873;
+  --md-sys-color-on-primary-container:#D7E8FF;
+  --md-sys-color-secondary:#C3C7D6;
+  --md-sys-color-on-secondary:#2B303C;
+  --md-sys-color-secondary-container:#3A4050;
+  --md-sys-color-on-secondary-container:#DEE1F1;
+  --md-sys-color-tertiary:#E7B8FF;
+  --md-sys-color-on-tertiary:#4A205E;
+  --md-sys-color-tertiary-container:#5C3170;
+  --md-sys-color-on-tertiary-container:#FAD7FF;
+  --md-sys-color-surface:#10131A;
+  --md-sys-color-surface-dim:#0C0F15;
+  --md-sys-color-surface-bright:#282C34;
+  --md-sys-color-surface-container-lowest:#0A0D12;
+  --md-sys-color-surface-container-low:#171B23;
+  --md-sys-color-surface-container:#1C2029;
+  --md-sys-color-surface-container-high:#262B35;
+  --md-sys-color-surface-container-highest:#313641;
+  --md-sys-color-on-surface:#E3E7F0;
+  --md-sys-color-on-surface-variant:#C2C7D4;
+  --md-sys-color-outline:#8C93A3;
+  --md-sys-color-outline-variant:#3D4350;
+  --md-sys-color-inverse-surface:#E3E7F0;
+  --md-sys-color-inverse-on-surface:#2B303A;
+  --md-sys-color-error:#FFB4AB;
+  --md-sys-color-on-error:#690005;
+  --md-sys-color-success:#7EDBC4;
+  --md-sys-color-warning:#FFC37E;
+
+  --md-sys-shape-small:8px;
+  --md-sys-shape-medium:16px;
+  --md-sys-shape-large:20px;
+  --md-sys-shape-extra-large:28px;
+  --md-sys-ease:cubic-bezier(.2,0,0,1);
+  --md-sys-ease-emphasized:cubic-bezier(.2,0,0,1);
+
+  --shadow-1:0 1px 2px rgba(0,0,0,.28),0 2px 8px rgba(0,0,0,.14);
+  --shadow-2:0 6px 18px rgba(0,0,0,.32),0 2px 6px rgba(0,0,0,.2);
+}
+
+html[data-theme="light"]{
+  --md-sys-color-primary:#3D63C9;
+  --md-sys-color-on-primary:#FFFFFF;
+  --md-sys-color-primary-container:#D9E3FF;
+  --md-sys-color-on-primary-container:#0A285B;
+  --md-sys-color-secondary:#565D71;
+  --md-sys-color-on-secondary:#FFFFFF;
+  --md-sys-color-secondary-container:#DAE0F6;
+  --md-sys-color-on-secondary-container:#141B2C;
+  --md-sys-color-tertiary:#7B4CA0;
+  --md-sys-color-on-tertiary:#FFFFFF;
+  --md-sys-color-tertiary-container:#F5DAFF;
+  --md-sys-color-on-tertiary-container:#2E1147;
+  --md-sys-color-surface:#FBFAFF;
+  --md-sys-color-surface-dim:#DAD9E4;
+  --md-sys-color-surface-bright:#FBFAFF;
+  --md-sys-color-surface-container-lowest:#FFFFFF;
+  --md-sys-color-surface-container-low:#F5F4FB;
+  --md-sys-color-surface-container:#EFEEF7;
+  --md-sys-color-surface-container-high:#E8E7F1;
+  --md-sys-color-surface-container-highest:#E2E1EC;
+  --md-sys-color-on-surface:#1A1B24;
+  --md-sys-color-on-surface-variant:#444B5D;
+  --md-sys-color-outline:#747B8E;
+  --md-sys-color-outline-variant:#C5C7D4;
+  --md-sys-color-inverse-surface:#2F303A;
+  --md-sys-color-inverse-on-surface:#F1F0FA;
+  --md-sys-color-error:#B3261E;
+  --md-sys-color-on-error:#FFFFFF;
+  --md-sys-color-success:#0F7B62;
+  --md-sys-color-warning:#9A5B00;
+  --shadow-1:0 1px 2px rgba(20,20,40,.08),0 2px 8px rgba(20,20,40,.06);
+  --shadow-2:0 8px 24px rgba(20,20,40,.14),0 2px 6px rgba(20,20,40,.08);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--md-sys-color-surface-dim);
+  color:var(--md-sys-color-on-surface);
+  font-family:Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  transition:background .3s var(--md-sys-ease),color .3s var(--md-sys-ease);
+}
+button,input,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--md-sys-color-primary);outline-offset:2px}
+svg{display:block}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--md-sys-color-outline-variant);border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ═══════════════ Shell ═══════════════ */
+.shell{
+  display:grid;
+  grid-template-columns:minmax(380px,428px) minmax(0,1fr);
+  gap:0;
+  width:100%;height:100dvh;
+  max-width:1600px;margin:0 auto;
+  overflow:hidden;
+  background:var(--md-sys-color-surface);
+}
+
+/* ═══════════════ WebUI 列 ═══════════════ */
+.webui{
+  position:relative;display:flex;flex-direction:column;min-height:0;
+  background:var(--md-sys-color-surface);
+  border-right:1px solid var(--md-sys-color-outline-variant);
+}
+.topbar{
+  flex:none;height:64px;display:flex;align-items:center;gap:8px;padding:0 16px;
+  background:var(--md-sys-color-surface);
+  border-bottom:1px solid transparent;
+  transition:background .25s var(--md-sys-ease),border-color .25s var(--md-sys-ease);
+  z-index:12;
+}
+.topbar.scrolled{background:var(--md-sys-color-surface-container);border-color:var(--md-sys-color-outline-variant)}
+.brand-mark{
+  width:34px;height:34px;flex:none;border-radius:11px;display:grid;place-items:center;
+  background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);
+}
+.brand-mark svg{width:20px;height:20px}
+.topbar-titles{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.topbar-titles b{font-size:16px;font-weight:600;letter-spacing:.1px}
+.topbar-titles span{font-size:11px;color:var(--md-sys-color-on-surface-variant)}
+.icon-btn{
+  width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;
+  color:var(--md-sys-color-on-surface-variant);position:relative;overflow:hidden;
+  transition:background .18s,color .18s;
+}
+.icon-btn svg{width:20px;height:20px}
+.icon-btn:hover{background:color-mix(in srgb,var(--md-sys-color-on-surface) 9%,transparent);color:var(--md-sys-color-on-surface)}
+.icon-btn:active{background:color-mix(in srgb,var(--md-sys-color-on-surface) 14%,transparent)}
+
+.scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 16px 28px}
+.hero{padding:20px 4px 18px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:1.6px;color:var(--md-sys-color-primary);margin-bottom:8px}
+.hero h1{margin:0;font-size:32px;line-height:1.15;font-weight:400;letter-spacing:-.4px}
+.hero p{margin:6px 0 14px;font-size:12.5px;color:var(--md-sys-color-on-surface-variant)}
+.hero-meta{display:flex;gap:7px;flex-wrap:wrap}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:8px;
+  font-size:11px;font-weight:500;white-space:nowrap;
+}
+.chip svg{width:13px;height:13px}
+.chip-tonal{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}
+.chip-outline{border:1px solid var(--md-sys-color-outline-variant);color:var(--md-sys-color-on-surface-variant)}
+
+.group-title{
+  display:flex;align-items:center;gap:8px;
+  padding:18px 4px 9px;font-size:12px;font-weight:600;letter-spacing:.4px;
+  color:var(--md-sys-color-primary);
+}
+.count-pill{
+  font-size:10px;font-weight:600;letter-spacing:0;
+  padding:2px 8px;border-radius:20px;
+  background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);
+}
+.group-hint{margin:0 4px 10px;font-size:11.5px;color:var(--md-sys-color-on-surface-variant)}
+
+.card{
+  background:var(--md-sys-color-surface-container-low);
+  border-radius:var(--md-sys-shape-large);
+  padding:6px 14px;margin-bottom:4px;
+  box-shadow:var(--shadow-1);
+}
+.card-flush{padding:4px 6px}
+.card-note{
+  margin:4px 2px 12px;padding:0 4px;font-size:11px;line-height:1.6;
+  color:var(--md-sys-color-on-surface-variant);
+}
+.card-note code,.dialog-note code,.about code{
+  font-family:ui-monospace,Consolas,monospace;font-size:10.5px;
+  background:var(--md-sys-color-surface-container-high);padding:1px 5px;border-radius:4px;
+}
+.card-actions{display:flex;justify-content:flex-end;padding:2px 0 10px}
+
+/* ── MD3 List item ── */
+.row{
+  display:flex;align-items:center;gap:12px;min-height:62px;padding:9px 2px;
+  border-bottom:1px solid var(--md-sys-color-outline-variant);
+}
+.row:last-child{border-bottom:0}
+.row-icon{
+  width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);
+}
+.row-icon svg{width:18px;height:18px}
+.row-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row-text b{font-size:13.5px;font-weight:500;line-height:1.35}
+.row-text small{font-size:11px;color:var(--md-sys-color-on-surface-variant);line-height:1.4}
+.row.is-disabled{opacity:.42;pointer-events:none}
+
+/* ── MD3 Switch ── */
+.switch{position:relative;flex:none;width:52px;height:32px;display:block;cursor:pointer}
+.switch input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.track{
+  position:absolute;inset:0;border-radius:16px;
+  border:2px solid var(--md-sys-color-outline);
+  background:var(--md-sys-color-surface-container-highest);
+  transition:background .2s var(--md-sys-ease),border-color .2s var(--md-sys-ease);
+}
+.thumb{
+  position:absolute;top:50%;left:8px;transform:translateY(-50%);
+  width:16px;height:16px;border-radius:50%;
+  background:var(--md-sys-color-outline);
+  transition:width .22s var(--md-sys-ease),height .22s var(--md-sys-ease),
+             left .22s var(--md-sys-ease),background .2s var(--md-sys-ease);
+}
+.switch input:checked + .track{border-color:var(--md-sys-color-primary);background:var(--md-sys-color-primary)}
+.switch input:checked + .track .thumb{
+  width:24px;height:24px;left:22px;background:var(--md-sys-color-on-primary);
+}
+.switch input:not(:checked) + .track .thumb::after{content:"";position:absolute;inset:0}
+.switch input:disabled + .track{opacity:.4}
+
+/* ── MD3 Slider ── */
+.slider-block{padding:12px 4px 14px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.slider-block:last-child{border-bottom:0}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.slider-head span{font-size:13.5px;font-weight:500}
+.slider-head output{
+  font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;
+  color:var(--md-sys-color-primary);
+  background:var(--md-sys-color-primary-container);
+  padding:3px 10px;border-radius:8px;
+}
+.slider-wrap{position:relative;height:24px;display:flex;align-items:center;padding:0 2px}
+.slider-wrap input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:16px;margin:0;background:transparent;cursor:pointer;position:relative;z-index:2;
+}
+.slider-wrap input[type=range]::-webkit-slider-runnable-track{
+  height:16px;border-radius:8px;
+  background:linear-gradient(to right,var(--md-sys-color-primary) 0 var(--p,50%),var(--md-sys-color-surface-container-highest) var(--p,50%) 100%);
+  border:1px solid color-mix(in srgb,var(--md-sys-color-outline-variant) 60%,transparent);
+}
+.slider-wrap input[type=range]::-moz-range-track{height:16px;border-radius:8px;background:var(--md-sys-color-surface-container-highest)}
+.slider-wrap input[type=range]::-moz-range-progress{height:16px;border-radius:8px;background:var(--md-sys-color-primary)}
+.slider-wrap input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:6px;height:26px;border-radius:4px;
+  background:var(--md-sys-color-on-primary);
+  border:1px solid color-mix(in srgb,var(--md-sys-color-primary) 70%,transparent);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+  margin-top:-6px;
+  transition:height .15s;
+}
+.slider-wrap input[type=range]:active::-webkit-slider-thumb{height:30px}
+.slider-wrap input[type=range]::-moz-range-thumb{
+  width:6px;height:26px;border-radius:4px;background:var(--md-sys-color-on-primary);border:0;
+}
+.slider-tip{
+  position:absolute;top:-30px;left:var(--p,50%);transform:translateX(-50%);
+  background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);
+  font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .15s;font-variant-numeric:tabular-nums;
+}
+.slider-wrap:hover .slider-tip,.slider-wrap:active .slider-tip{opacity:1}
+.slider-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--md-sys-color-on-surface-variant);margin-top:6px;padding:0 2px}
+
+/* ── MD3 Segmented button ── */
+.segmented{display:flex;width:100%;border:1px solid var(--md-sys-color-outline);border-radius:20px;overflow:hidden}
+.seg{
+  flex:1;min-width:0;height:38px;display:flex;align-items:center;justify-content:center;gap:5px;
+  font-size:12px;font-weight:500;color:var(--md-sys-color-on-surface);
+  border-right:1px solid var(--md-sys-color-outline);position:relative;overflow:hidden;
+  transition:background .18s,color .18s;white-space:nowrap;
+}
+.seg:last-child{border-right:0}
+.seg:hover{background:color-mix(in srgb,var(--md-sys-color-on-surface) 7%,transparent)}
+.seg.active{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);font-weight:600}
+.seg.active::before{content:"✓";font-size:12px;margin-right:2px}
+.segmented.compact{width:auto;border-radius:18px}
+.segmented.compact .seg{height:32px;padding:0 14px;flex:none;font-size:11.5px}
+.preset-block{padding:12px 2px 14px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+
+/* ── MD3 Buttons ── */
+.text-btn{
+  display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:18px;
+  color:var(--md-sys-color-primary);font-size:12.5px;font-weight:600;
+  transition:background .18s;
+}
+.text-btn svg{width:16px;height:16px}
+.text-btn:hover{background:color-mix(in srgb,var(--md-sys-color-primary) 12%,transparent)}
+.tonal-btn{
+  height:34px;padding:0 16px;border-radius:18px;font-size:12.5px;font-weight:600;
+  background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);
+  transition:filter .18s,box-shadow .18s;
+}
+.tonal-btn:hover{filter:brightness(1.12);box-shadow:var(--shadow-1)}
+.tonal-btn:active{filter:brightness(.94)}
+.filled-btn{
+  height:40px;padding:0 22px;border-radius:20px;font-size:13px;font-weight:600;
+  background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);
+  transition:filter .18s,box-shadow .18s;
+}
+.filled-btn:hover{filter:brightness(1.1);box-shadow:var(--shadow-1)}
+
+/* ── Text field ── */
+.field-wrap{padding:4px 2px 14px}
+.text-field{
+  display:block;position:relative;margin:10px 2px 8px;
+  border:1px solid var(--md-sys-color-outline);border-radius:var(--md-sys-shape-small);
+  padding:8px 12px 6px;
+  transition:border-color .18s;
+}
+.text-field:focus-within{border-color:var(--md-sys-color-primary);border-width:2px;padding:7px 11px 5px}
+.text-field > span{
+  display:block;font-size:10.5px;color:var(--md-sys-color-on-surface-variant);margin-bottom:4px;
+}
+.text-field textarea{
+  display:block;width:100%;border:0;background:transparent;outline:0;resize:vertical;
+  font-family:ui-monospace,Consolas,"Microsoft YaHei",monospace;font-size:12px;line-height:1.6;
+  color:var(--md-sys-color-on-surface);
+}
+.text-field textarea::placeholder{color:color-mix(in srgb,var(--md-sys-color-on-surface-variant) 65%,transparent)}
+.field-hint{display:block;font-size:10.5px;color:var(--md-sys-color-on-surface-variant);padding:0 4px}
+
+/* ── Color swatches ── */
+.sub-block{padding:12px 2px 14px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.sub-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;margin-bottom:12px}
+.key-hint{
+  font-family:ui-monospace,Consolas,monospace;font-size:10px;font-weight:400;
+  color:var(--md-sys-color-on-surface-variant);
+  background:var(--md-sys-color-surface-container-high);padding:1px 6px;border-radius:5px;
+}
+.swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.swatch{
+  display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 2px 5px;
+  border-radius:12px;border:1px solid transparent;position:relative;
+  transition:background .18s,border-color .18s,transform .18s var(--md-sys-ease);
+}
+.swatch:hover{background:var(--md-sys-color-surface-container-high)}
+.swatch i{
+  width:24px;height:24px;border-radius:50%;background:var(--sw);
+  border:1.5px solid rgba(127,127,127,.45);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.swatch span{font-size:10px;color:var(--md-sys-color-on-surface-variant)}
+.swatch.active{border-color:var(--md-sys-color-primary);background:var(--md-sys-color-primary-container)}
+.swatch.active span{color:var(--md-sys-color-on-primary-container);font-weight:600}
+.swatch.active i::after{
+  content:"✓";position:absolute;top:18px;left:50%;transform:translate(-50%,-50%);
+  font-size:13px;font-weight:700;color:#111;text-shadow:0 0 3px #fff,0 0 3px #fff;
+}
+.swatches.is-disabled{opacity:.4;pointer-events:none}
+
+.seed-chips{display:flex;gap:10px;flex-wrap:wrap}
+.seed-chip{
+  width:34px;height:34px;border-radius:50%;background:var(--sc);
+  border:3px solid var(--md-sys-color-surface-container-low);
+  outline:1px solid var(--md-sys-color-outline-variant);
+  transition:transform .2s var(--md-sys-ease),outline-color .2s;
+}
+.seed-chip:hover{transform:scale(1.1)}
+.seed-chip.active{outline:2px solid var(--md-sys-color-primary);transform:scale(1.08)}
+
+/* ── 状态卡 ── */
+.status-card{padding:14px}
+.status-hero{display:flex;align-items:center;gap:12px;padding:2px 2px 14px}
+.status-ring{
+  width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--md-sys-color-success) 18%,transparent);
+  color:var(--md-sys-color-success);
+}
+.status-ring svg{width:22px;height:22px}
+.status-hero-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.status-hero-text b{font-size:14px;font-weight:600}
+.status-hero-text small{font-size:10.5px;color:var(--md-sys-color-on-surface-variant)}
+.badge{font-size:10px;font-weight:700;padding:4px 9px;border-radius:8px;white-space:nowrap}
+.badge-ok{background:color-mix(in srgb,var(--md-sys-color-success) 18%,transparent);color:var(--md-sys-color-success)}
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.status-cell{
+  background:var(--md-sys-color-surface-container);border-radius:12px;padding:9px 11px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.status-cell small{font-size:10px;color:var(--md-sys-color-on-surface-variant)}
+.status-cell b{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ── 监视项目列表 ── */
+.mod-item{border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.mod-item:last-child{border-bottom:0}
+.mod-main{display:flex;align-items:center;gap:8px;min-height:60px;padding:6px 8px}
+.mod-drag{
+  width:22px;flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--md-sys-color-on-surface-variant);
+}
+.mod-drag svg{width:13px;height:13px}
+.mod-icon{
+  width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;
+  background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);
+  transition:background .2s,color .2s;
+}
+.mod-icon svg{width:18px;height:18px}
+.mod-item.on .mod-icon{background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}
+.mod-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+.mod-info b{font-size:13.5px;font-weight:500}
+.mod-info small{font-family:ui-monospace,Consolas,monospace;font-size:10px;color:var(--md-sys-color-on-surface-variant)}
+.mod-tools{display:flex;align-items:center;gap:2px;flex:none}
+.mod-expand{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--md-sys-color-on-surface-variant)}
+.mod-expand:hover{background:var(--md-sys-color-surface-container-high)}
+.mod-expand svg{width:16px;height:16px;transition:transform .22s var(--md-sys-ease)}
+.mod-item.open .mod-expand svg{transform:rotate(180deg)}
+.mod-detail{
+  display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s var(--md-sys-ease);
+}
+.mod-item.open .mod-detail{grid-template-rows:1fr}
+.mod-detail-inner{overflow:hidden}
+.mod-detail-pad{padding:2px 8px 14px 40px}
+.mod-name-field{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mod-name-field > span{font-size:11.5px;color:var(--md-sys-color-on-surface-variant);white-space:nowrap}
+.mod-name-field input{
+  flex:1;min-width:0;height:34px;padding:0 10px;border-radius:8px;
+  border:1px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container);
+  font-size:12px;outline:0;
+}
+.mod-name-field input:focus{border-color:var(--md-sys-color-primary);border-width:2px}
+.mod-sub{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--md-sys-color-on-surface-variant);padding:4px 0}
+.mod-sub .switch{transform:scale(.78);transform-origin:right center;margin-left:auto}
+.mod-sub b{font-weight:500;color:var(--md-sys-color-on-surface)}
+.mod-order-actions{display:flex;gap:4px}
+.mini-btn{
+  width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);
+}
+.mini-btn svg{width:14px;height:14px}
+.mini-btn:hover{background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}
+.mini-btn:disabled{opacity:.3;cursor:default}
+.fps-row{gap:10px}
+.fps-tag{
+  width:24px;height:24px;flex:none;border-radius:7px;display:grid;place-items:center;
+  font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:700;
+  background:var(--md-sys-color-tertiary-container);color:var(--md-sys-color-on-tertiary-container);
+}
+
+/* ── 底部导航 / FAB ── */
+.navbar{
+  flex:none;display:grid;grid-template-columns:repeat(4,1fr);
+  height:78px;padding:8px 8px 10px;
+  background:var(--md-sys-color-surface-container);
+  border-top:1px solid var(--md-sys-color-outline-variant);
+  z-index:11;
+}
+.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--md-sys-color-on-surface-variant)}
+.nav-ind{
+  width:60px;height:32px;border-radius:16px;display:grid;place-items:center;
+  transition:background .22s var(--md-sys-ease),color .22s;
+}
+.nav-ind svg{width:20px;height:20px}
+.nav-item small{font-size:11px;font-weight:500}
+.nav-item.active{color:var(--md-sys-color-on-surface)}
+.nav-item.active .nav-ind{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container)}
+.nav-item.active small{font-weight:700}
+.nav-item:hover .nav-ind{background:color-mix(in srgb,var(--md-sys-color-on-surface) 8%,transparent)}
+.nav-item.active:hover .nav-ind{background:var(--md-sys-color-secondary-container)}
+
+.fab-holder{position:absolute;right:16px;bottom:92px;z-index:14}
+.fab{
+  display:flex;align-items:center;gap:9px;height:52px;padding:0 20px;border-radius:16px;
+  background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);
+  font-size:13px;font-weight:600;box-shadow:var(--shadow-2);
+  animation:fab-in .28s var(--md-sys-ease-emphasized);
+  transition:filter .18s,transform .18s var(--md-sys-ease);
+}
+.fab svg{width:20px;height:20px}
+.fab:hover{filter:brightness(1.1);transform:translateY(-2px)}
+@keyframes fab-in{from{opacity:0;transform:translateY(14px) scale(.9)}to{opacity:1;transform:none}}
+
+/* ── About ── */
+.about{margin:22px 4px 8px;padding:16px;border-radius:var(--md-sys-shape-large);background:var(--md-sys-color-surface-container-low);display:flex;flex-direction:column;gap:8px}
+.about > div{display:flex;flex-direction:column;gap:2px}
+.about b{font-size:13px;font-weight:600}
+.about span{font-size:11px;color:var(--md-sys-color-on-surface-variant)}
+.about p{margin:0;font-size:11px;line-height:1.7;color:var(--md-sys-color-on-surface-variant)}
+
+/* ═══════════════ 右侧预览舞台 ═══════════════ */
+.stage{
+  min-width:0;min-height:0;display:flex;flex-direction:column;
+  background:
+    radial-gradient(1100px 620px at 78% -12%,color-mix(in srgb,var(--md-sys-color-primary) 11%,transparent),transparent 70%),
+    var(--md-sys-color-surface-dim);
+  padding:26px 30px 22px;gap:18px;overflow-y:auto;
+}
+.stage-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex:none}
+.stage-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.6px;color:var(--md-sys-color-primary);margin-bottom:5px}
+.stage-head h2{margin:0;font-size:21px;font-weight:400;letter-spacing:-.2px}
+.stage-tools{display:flex;align-items:center;gap:8px}
+.stage-tools .icon-btn{border:1px solid var(--md-sys-color-outline-variant);background:var(--md-sys-color-surface-container-low)}
+
+.stage-canvas{flex:1;min-height:270px;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.device{
+  position:relative;width:100%;max-width:480px;height:300px;margin:0 auto;
+  border-radius:26px;overflow:hidden;isolation:isolate;
+  border:1px solid color-mix(in srgb,var(--md-sys-color-outline-variant) 75%,transparent);
+  box-shadow:0 20px 50px rgba(0,0,0,.42),0 0 0 6px color-mix(in srgb,var(--md-sys-color-surface-container-low) 70%,transparent);
+  transition:height .35s var(--md-sys-ease),max-width .35s var(--md-sys-ease);
+  color:#F2F5FF;
+}
+.device.landscape{max-width:760px;height:250px}
+.wallpaper{position:absolute;inset:0;background:
+  radial-gradient(560px 340px at 22% 8%,#3B4D9E 0%,transparent 70%),
+  radial-gradient(500px 380px at 88% 26%,#7A3E86 0%,transparent 72%),
+  radial-gradient(420px 300px at 52% 100%,#1E4C6B 0%,transparent 70%),
+  linear-gradient(155deg,#161C3A 0%,#0D1226 48%,#132038 100%);
+}
+.wallpaper-glow{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.34) 0%,transparent 26%,rgba(0,0,0,.18) 68%,rgba(0,0,0,.62) 100%)}
+.status-bar{
+  position:absolute;top:0;left:0;right:0;height:34px;z-index:3;
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  font-family:"Segoe UI",Roboto,sans-serif;font-size:12px;font-weight:600;
+  color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.5);
+}
+.sb-icons{display:flex;align-items:center;gap:5px}
+.sb-time{font-variant-numeric:tabular-nums;letter-spacing:.3px}
+
+/* ── HUD 监视条（实时渲染） ── */
+.hud{
+  position:absolute;top:calc(7px + var(--hud-y,0px));left:50%;z-index:4;
+  transform:translateX(calc(-50% + var(--hud-x,0px)));
+  display:flex;align-items:center;gap:var(--hud-gap,18px);
+  padding:var(--hud-pad,3px 6px);
+  border-radius:7px;background:var(--hud-bg,transparent);
+  font-family:"Segoe UI",Roboto,system-ui,sans-serif;
+  font-size:var(--hud-fs,15px);font-weight:var(--hud-fw,700);
+  color:var(--hud-color,#FFFFFF);
+  line-height:1.1;white-space:nowrap;max-width:calc(100% - 12px);overflow:hidden;
+  text-shadow:0 1px 2px rgba(0,0,0,.45);
+  transition:color .2s,font-size .2s,background .2s,gap .2s,font-weight .2s;
+}
+.hud .mi{display:inline-flex;align-items:center;gap:var(--hud-inner-gap,4px);flex:none}
+.hud svg{width:var(--hud-icon,17px);height:var(--hud-icon,17px);stroke:currentColor;fill:none;stroke-width:var(--hud-stroke,2);stroke-linecap:round;stroke-linejoin:round;flex:none}
+.hud .num{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.hud .label{letter-spacing:.02em}
+.hud .bars{display:inline-flex;align-items:flex-end;gap:1px;height:var(--hud-bar-h,13px);flex:none}
+.hud .bars i{display:block;width:2px;height:var(--v,40%);background:currentColor;border-radius:1px;opacity:.92}
+.hud .bars i.hi{background:#F87171}
+.hud .sub{opacity:.72;font-size:.86em}
+.hud-space{display:inline-block;width:var(--hud-space-w,6px);flex:none}
+
+.screen-body{
+  position:absolute;top:74px;left:0;right:0;bottom:0;z-index:2;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  opacity:.24;filter:blur(.4px);
+}
+.screen-app{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18)}
+.screen-app svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:1.6}
+.screen-lines{display:flex;flex-direction:column;gap:7px;align-items:center}
+.screen-lines i{display:block;height:5px;border-radius:4px;background:rgba(255,255,255,.35)}
+.screen-lines i:nth-child(1){width:130px}.screen-lines i:nth-child(2){width:96px}.screen-lines i:nth-child(3){width:116px}
+.screen-caption{
+  position:absolute;bottom:12px;left:0;right:0;z-index:5;text-align:center;
+  font-size:10px;letter-spacing:.4px;color:rgba(255,255,255,.55);
+}
+.hud-hidden{
+  position:absolute;top:44px;left:50%;transform:translateX(-50%);z-index:6;
+  padding:7px 14px;border-radius:10px;background:rgba(0,0,0,.55);
+  color:rgba(255,255,255,.82);font-size:11px;white-space:nowrap;
+}
+.stage-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;font-size:10.5px;color:var(--md-sys-color-on-surface-variant)}
+.cond-chip{
+  display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:9px;
+  border:1px solid var(--md-sys-color-outline-variant);
+  color:var(--md-sys-color-on-surface-variant);font-size:10.5px;font-weight:500;
+  transition:background .18s,color .18s,border-color .18s;
+}
+.cond-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--md-sys-color-outline)}
+.cond-chip:hover{background:var(--md-sys-color-surface-container-high)}
+.cond-chip.on{
+  background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);
+  border-color:transparent;font-weight:600;
+}
+.cond-chip.on::before{background:var(--md-sys-color-success);box-shadow:0 0 0 3px color-mix(in srgb,var(--md-sys-color-success) 18%,transparent)}
+.legend-status{margin-left:6px;padding-left:12px;border-left:1px solid var(--md-sys-color-outline-variant);font-size:10.5px;white-space:nowrap}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--md-sys-color-outline);display:inline-block}
+
+/* ── 配置快照 ── */
+.payload-card{
+  flex:none;background:var(--md-sys-color-surface-container-low);
+  border:1px solid var(--md-sys-color-outline-variant);border-radius:var(--md-sys-shape-large);
+  padding:12px 16px 14px;box-shadow:var(--shadow-1);
+}
+.payload-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.payload-head > div{display:flex;flex-direction:column;gap:2px}
+.payload-head b{font-size:13px;font-weight:600}
+.payload-head small{font-size:10.5px;color:var(--md-sys-color-on-surface-variant)}
+.payload{
+  margin:0;max-height:118px;overflow:auto;
+  font-family:ui-monospace,Consolas,"Microsoft YaHei",monospace;font-size:10.5px;line-height:1.65;
+  color:var(--md-sys-color-on-surface-variant);white-space:pre-wrap;word-break:break-all;
+}
+.payload .k{color:var(--md-sys-color-primary)}
+.payload .v{color:var(--md-sys-color-tertiary)}
+
+/* ═══════════════ Dialog / Snackbar ═══════════════ */
+.scrim{
+  position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
+  animation:scrim-in .2s ease;
+}
+@keyframes scrim-in{from{opacity:0}to{opacity:1}}
+.dialog{
+  width:min(440px,100%);max-height:88dvh;overflow:auto;
+  background:var(--md-sys-color-surface-container-high);
+  border-radius:var(--md-sys-shape-extra-large);padding:24px;
+  box-shadow:var(--shadow-2);
+  animation:dialog-in .28s var(--md-sys-ease-emphasized);
+}
+@keyframes dialog-in{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:none}}
+.dialog-icon{
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px;
+  background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-secondary-container);
+}
+.dialog-icon svg{width:22px;height:22px}
+.dialog h2{margin:0 0 6px;font-size:22px;font-weight:400}
+.dialog > p{margin:0 0 14px;font-size:12.5px;color:var(--md-sys-color-on-surface-variant);line-height:1.6}
+.dialog-code{
+  background:var(--md-sys-color-surface-container-lowest);border-radius:12px;padding:12px;
+  border:1px solid var(--md-sys-color-outline-variant);
+}
+.dialog-code pre{
+  margin:0;max-height:150px;overflow:auto;
+  font-family:ui-monospace,Consolas,monospace;font-size:10.5px;line-height:1.7;
+  color:var(--md-sys-color-on-surface-variant);white-space:pre-wrap;word-break:break-all;
+}
+.dialog-note{font-size:11px!important;margin:12px 0 4px!important}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* ══════════════ 应用白名单选择器 ══════════════ */
+.pick-apps-btn{margin-top:10px}
+.app-dialog{width:min(460px,100%)}
+.app-search{display:block;margin-bottom:10px}
+.app-search input{
+  width:100%;box-sizing:border-box;padding:11px 14px;border-radius:12px;
+  border:1px solid var(--md-sys-color-outline-variant);
+  background:var(--md-sys-color-surface-container-lowest);
+  color:var(--md-sys-color-on-surface);font:13px/1.4 inherit;outline:none;
+}
+.app-search input:focus{border-color:var(--md-sys-color-primary)}
+.app-all{
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;
+  font-size:12px;color:var(--md-sys-color-on-surface-variant);
+}
+.app-all input{accent-color:var(--md-sys-color-primary)}
+.app-list{
+  max-height:44dvh;overflow:auto;border-radius:12px;
+  border:1px solid var(--md-sys-color-outline-variant);
+  background:var(--md-sys-color-surface-container-lowest);
+}
+.app-row{
+  display:flex;align-items:center;gap:12px;padding:9px 12px;cursor:pointer;
+  border-bottom:1px solid var(--md-sys-color-outline-variant);
+}
+.app-row:last-child{border-bottom:0}
+.app-row:hover{background:var(--md-sys-color-surface-container)}
+.app-row input{flex:none;width:16px;height:16px;accent-color:var(--md-sys-color-primary)}
+.app-row-text{display:flex;flex-direction:column;min-width:0}
+.app-row-text b{
+  font-size:12.5px;font-weight:500;color:var(--md-sys-color-on-surface);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.app-row-text small{
+  font-size:10.5px;color:var(--md-sys-color-on-surface-variant);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.app-empty{
+  margin:0;padding:22px;text-align:center;
+  font-size:12px;color:var(--md-sys-color-on-surface-variant);
+}
+
+.snackbar{
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:120;
+  min-width:220px;max-width:min(460px,90vw);padding:13px 18px;border-radius:12px;
+  background:var(--md-sys-color-inverse-surface);color:var(--md-sys-color-inverse-on-surface);
+  font-size:12.5px;font-weight:500;box-shadow:var(--shadow-2);
+  animation:snack-in .25s var(--md-sys-ease-emphasized);
+}
+@keyframes snack-in{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* ═══════════════ 窄屏：预览吸顶，单列文档流 ═══════════════ */
+@media (max-width:960px){
+  html,body{height:auto;min-height:100%}
+  .shell{display:flex;flex-direction:column;height:auto;min-height:100dvh;max-width:560px;overflow:visible}
+  .stage{
+    order:-1;position:sticky;top:0;z-index:30;overflow:visible;
+    padding:12px 14px 10px;gap:8px;
+    background:var(--md-sys-color-surface-container-low);
+    border-bottom:1px solid var(--md-sys-color-outline-variant);
+    box-shadow:0 6px 18px rgba(0,0,0,.18);
+  }
+  .stage-head h2{font-size:15px}
+  .stage-eyebrow{display:none}
+  .stage-tools .segmented.compact .seg{height:28px;padding:0 10px}
+  .stage-tools .icon-btn{width:32px;height:32px}
+  .stage-tools .icon-btn svg{width:17px;height:17px}
+  .stage-canvas{min-height:0;gap:8px}
+  .device,.device.landscape{height:150px;max-width:100%;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.3)}
+  .screen-body{top:52px}
+  .screen-caption{display:none}
+  .stage-legend,.payload-card{display:none}
+  .webui{overflow:visible;border-right:0;min-height:0}
+  .scroll{overflow:visible;padding:0 14px 20px}
+  .navbar{position:sticky;bottom:0}
+  .fab-holder{position:fixed;bottom:92px;right:14px}
+  .topbar{position:sticky;top:0;background:var(--md-sys-color-surface)}
+}
+
+@media (max-width:420px){
+  .swatches{grid-template-columns:repeat(4,1fr)}
+  .swatch i{width:28px;height:28px}
+  .status-grid{grid-template-columns:1fr 1fr}
+  .hero h1{font-size:28px}
+}
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══════════════ 左：WebUI（手机视口） ══════════════ -->
+  <section class="webui" id="webui">
+
+    <header class="topbar" id="topbar">
+      <div class="brand-mark" data-icon="activity"></div>
+      <div class="topbar-titles">
+        <b>NexusFloat</b>
+        <span id="topbarSub">控制台</span>
+      </div>
+      <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
+      <button class="icon-btn" id="seedBtn" title="切换动态取色"><span data-icon="palette"></span></button>
+      <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
+    </header>
+
+    <div class="scroll" id="scroll">
+
+      <div class="hero" id="hero">
+        <div class="eyebrow">LSPOSED · SYSTEMUI · WEBUI</div>
+        <h1>NexusFloat</h1>
+        <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
+        <div class="hero-meta">
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.9</span>
+          <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
+          <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
+        </div>
+      </div>
+
+      <!-- ───────── 状态 ───────── -->
+      <section class="page" data-page="status">
+
+        <div class="group-title">运行状态</div>
+        <div class="card status-card">
+          <div class="status-hero">
+            <div class="status-ring"><span data-icon="check"></span></div>
+            <div class="status-hero-text">
+              <b>模块运行中</b>
+              <small id="statusSub">设置通道已连接 · 上次同步 1 秒前</small>
+            </div>
+            <span class="badge badge-ok">已激活</span>
+          </div>
+          <div class="status-grid">
+            <div class="status-cell"><small>LSPosed 注入</small><b>系统界面</b></div>
+            <div class="status-cell"><small>GPU 实时</small><b id="statGpu">-- MHz · -- %</b></div>
+            <div class="status-cell"><small>刷新间隔</small><b id="statInterval">1.0 s</b></div>
+            <div class="status-cell"><small>启用项目</small><b id="statModules">4 / 11</b></div>
+          </div>
+        </div>
+
+        <div class="group-title">显示时机</div>
+        <div class="card">
+          <div class="row">
+            <span class="row-icon" data-icon="smartphone"></span>
+            <div class="row-text"><b>竖屏显示</b><small>竖屏时显示监视条</small></div>
+            <label class="switch"><input type="checkbox" data-key="show_portrait" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="landscape"></span>
+            <div class="row-text"><b>横屏显示</b><small>全屏游戏 / 视频时同样显示</small></div>
+            <label class="switch"><input type="checkbox" data-key="show_landscape" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="moon"></span>
+            <div class="row-text"><b>息屏显示</b><small>关闭可省电，锁屏即隐藏</small></div>
+            <label class="switch"><input type="checkbox" data-key="show_screen_off" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="battery"></span>
+            <div class="row-text"><b>仅充电时显示</b><small>以电池实际进电为准，非插线状态</small></div>
+            <label class="switch"><input type="checkbox" data-key="show_charging_only" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+        </div>
+
+        <div class="group-title">作用范围</div>
+        <div class="card">
+          <div class="row">
+            <span class="row-icon" data-icon="filter"></span>
+            <div class="row-text"><b>仅在选定应用显示</b><small>白名单外一律隐藏监视条</small></div>
+            <label class="switch"><input type="checkbox" data-key="app_filter" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="field-wrap" id="whitelistWrap" hidden>
+            <label class="text-field">
+              <span>应用白名单（包名，每行一个）</span>
+              <textarea data-key="app_whitelist" data-type="s" rows="3" spellcheck="false" placeholder="com.miHoYo.Yuanshen&#10;com.tencent.tmgp.sgame"></textarea>
+            </label>
+            <button class="text-btn pick-apps-btn" id="pickAppsBtn"><span data-icon="list"></span>从已装应用选择</button>
+            <small class="field-hint">换行分隔包名。App 内可直接勾选已安装应用；Settings.Global 快照通道会自动把换行换成空格，读侧两种分隔符都识别。</small>
+          </div>
+        </div>
+
+        <div class="group-title">维护</div>
+        <div class="card">
+          <div class="row">
+            <span class="row-icon" data-icon="refresh"></span>
+            <div class="row-text"><b>重启系统界面</b><small>改动外观后需重启 SystemUI 生效</small></div>
+            <button class="tonal-btn" data-action="restart">重启</button>
+          </div>
+          <p class="card-note">监视条是独立悬浮窗，横屏全屏场景不依赖下拉状态栏。GPU 数据需要 root；管理器未授权时其余指标照常工作。</p>
+        </div>
+      </section>
+
+      <!-- ───────── 项目 ───────── -->
+      <section class="page" data-page="modules" hidden>
+        <div class="group-title">监视项目 <span class="count-pill" id="modCount">4 项启用</span></div>
+        <p class="group-hint">开关控制显示，↑↓ 调整监视条上的排列顺序；展开可改显示名称。</p>
+        <div class="card card-flush" id="moduleList"></div>
+
+        <div class="group-title">图表与频率</div>
+        <div class="card">
+          <div class="row">
+            <span class="row-icon" data-icon="bar"></span>
+            <div class="row-text"><b>CPU 占用柱状图</b><small>8 根竖条，跟着各核心占用波动</small></div>
+            <label class="switch"><input type="checkbox" data-key="cpu_bar" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="bar"></span>
+            <div class="row-text"><b>GPU 占用柱状图</b><small>单根竖条</small></div>
+            <label class="switch"><input type="checkbox" data-key="gpu_bar" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="cpu"></span>
+            <div class="row-text"><b>CPU 频率</b><small>括号内显示最低-最高频率</small></div>
+            <label class="switch"><input type="checkbox" data-key="mod_cpu_freq" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="gpu"></span>
+            <div class="row-text"><b>GPU 频率</b><small>括号内显示当前频率</small></div>
+            <label class="switch"><input type="checkbox" data-key="mod_gpu_freq" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+        </div>
+
+        <div class="group-title">空格自定义</div>
+        <div class="card">
+          <label class="text-field">
+            <span>项目名 + 空格数</span>
+            <textarea data-key="space_before" data-type="s" rows="2" spellcheck="false" placeholder="ZRAM2,CPU1"></textarea>
+          </label>
+          <p class="card-note">默认各项紧贴。填 <code>ZRAM2,CPU1</code> 表示在 ZRAM 前留 2 个空格、CPU 前留 1 个；多个用逗号隔开，空格数 1–9。</p>
+        </div>
+      </section>
+
+      <!-- ───────── 外观 ───────── -->
+      <section class="page" data-page="appearance" hidden>
+        <div class="group-title">文字</div>
+        <div class="card">
+          <div class="slider-block">
+            <div class="slider-head"><span>字号</span><output data-for="font_size_sp">7 sp</output></div>
+            <div class="slider-wrap"><input type="range" min="5" max="20" step="1" data-key="font_size_sp" data-type="f" data-unit=" sp"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>5 sp</span><span>20 sp</span></div>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="bold"></span>
+            <div class="row-text"><b>字体加粗</b><small>内置 Segoe UI 真粗体，不叠伪加粗</small></div>
+            <label class="switch"><input type="checkbox" data-key="font_bold" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="sub-block">
+            <div class="sub-label">字体颜色 <span class="key-hint">text_color</span></div>
+            <div class="swatches" id="swatches">
+              <button class="swatch" data-value="0" style="--sw:#FFFFFF"><i></i><span>白</span></button>
+              <button class="swatch" data-value="1" style="--sw:#111111"><i></i><span>黑</span></button>
+              <button class="swatch" data-value="2" style="--sw:#6DB0FF"><i></i><span>蓝</span></button>
+              <button class="swatch" data-value="3" style="--sw:#34D399"><i></i><span>绿</span></button>
+              <button class="swatch" data-value="4" style="--sw:#FBBF24"><i></i><span>黄</span></button>
+              <button class="swatch" data-value="5" style="--sw:#F87171"><i></i><span>红</span></button>
+              <button class="swatch" data-value="6" style="--sw:#C084FC"><i></i><span>紫</span></button>
+              <button class="swatch" data-value="7" style="--sw:#22D3EE"><i></i><span>青</span></button>
+            </div>
+          </div>
+          <div class="row" id="contrastRow">
+            <span class="row-icon" data-icon="contrast"></span>
+            <div class="row-text"><b>自动反色</b><small>跟随状态栏图标明暗切深浅色</small></div>
+            <label class="switch"><input type="checkbox" data-key="auto_contrast" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <p class="card-note" id="contrastHint">开启后字体颜色由系统决定，色板不可用；与「显示背景」互斥。</p>
+        </div>
+
+        <div class="group-title">布局</div>
+        <div class="card">
+          <div class="slider-block">
+            <div class="slider-head"><span>项目间隔</span><output data-for="spacing_dp">8 dp</output></div>
+            <div class="slider-wrap"><input type="range" min="0" max="24" step="1" data-key="spacing_dp" data-type="f" data-unit=" dp"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>紧凑</span><span>疏松</span></div>
+          </div>
+          <div class="slider-block">
+            <div class="slider-head"><span>水平位置</span><output data-for="offset_x">0 px</output></div>
+            <div class="slider-wrap"><input type="range" min="-100" max="100" step="2" data-key="offset_x" data-type="i" data-unit=" px"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>左移</span><span>右移</span></div>
+          </div>
+          <div class="slider-block">
+            <div class="slider-head"><span>垂直位置</span><output data-for="offset_y">0 px</output></div>
+            <div class="slider-wrap"><input type="range" min="-100" max="100" step="2" data-key="offset_y" data-type="i" data-unit=" px"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>上移</span><span>下移</span></div>
+          </div>
+          <div class="card-actions"><button class="text-btn" data-action="resetOffset"><span data-icon="rotate"></span>复位位置</button></div>
+        </div>
+
+        <div class="group-title">背景</div>
+        <div class="card">
+          <div class="row">
+            <span class="row-icon" data-icon="square"></span>
+            <div class="row-text"><b>显示背景</b><small>半透明深灰圆角底；关闭则完全透明</small></div>
+            <label class="switch"><input type="checkbox" data-key="mod_background" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <p class="card-note">开启背景后自动反色会置灰——两者互斥，与现有 App 行为一致。</p>
+        </div>
+      </section>
+
+      <!-- ───────── 高级 ───────── -->
+      <section class="page" data-page="advanced" hidden>
+        <div class="group-title">采样与电源</div>
+        <div class="card">
+          <div class="slider-block">
+            <div class="slider-head"><span>刷新间隔</span><output data-for="update_interval_ms">1.0 s</output></div>
+            <div class="slider-wrap"><input type="range" min="500" max="2000" step="100" data-key="update_interval_ms" data-type="i" data-unit="" data-display="sec"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>0.5 s · 更跟手</span><span>2.0 s · 更省电</span></div>
+          </div>
+          <div class="slider-block">
+            <div class="slider-head"><span>后台唤醒</span><output data-for="wake_interval_sec">15 s</output></div>
+            <div class="slider-wrap"><input type="range" min="0" max="300" step="5" data-key="wake_interval_sec" data-type="i" data-unit=" s"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>0 = 关闭</span><span>300 s</span></div>
+          </div>
+          <div class="row">
+            <span class="row-icon" data-icon="battery"></span>
+            <div class="row-text"><b>双电芯</b><small>功率与电流按 2 倍显示</small></div>
+            <label class="switch"><input type="checkbox" data-key="dual_cell" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+        </div>
+
+        <div class="group-title">FPS 来源 <span class="count-pill">按序回退</span></div>
+        <p class="group-hint">数值后的字母是诊断标记。某一路在这台机器上不准，按字母关掉即可。</p>
+        <div class="card">
+          <div class="preset-block">
+            <div class="sub-label">快速预设</div>
+            <div class="segmented" id="presetSeg">
+              <button class="seg" data-preset="all">全部</button>
+              <button class="seg active" data-preset="qualcomm">高通</button>
+              <button class="seg" data-preset="mediatek">联发科</button>
+            </div>
+          </div>
+          <div class="row fps-row"><span class="fps-tag">p</span><div class="row-text"><b>面板 measured_fps</b><small>高通专有 · 瞬时帧率</small></div><label class="switch"><input type="checkbox" data-key="fps_src_panel" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row fps-row"><span class="fps-tag">b</span><div class="row-text"><b>SurfaceFlinger latency</b><small>Binder 取层时间戳</small></div><label class="switch"><input type="checkbox" data-key="fps_src_sf_latency" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row fps-row"><span class="fps-tag">t</span><div class="row-text"><b>SurfaceFlinger TimeStats</b><small>逐层帧统计 · Android 14+</small></div><label class="switch"><input type="checkbox" data-key="fps_src_sf_timestats" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row fps-row"><span class="fps-tag">g</span><div class="row-text"><b>FPSGO</b><small>联发科内核逐进程统计</small></div><label class="switch"><input type="checkbox" data-key="fps_src_fpsgo" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row fps-row"><span class="fps-tag">f</span><div class="row-text"><b>GED KPI</b><small>联发科 GED 模块</small></div><label class="switch"><input type="checkbox" data-key="fps_src_ged" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row fps-row"><span class="fps-tag">v</span><div class="row-text"><b>Choreographer</b><small>仅测屏幕刷新率 · 兜底</small></div><label class="switch"><input type="checkbox" data-key="fps_src_vsync" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+        </div>
+
+        <div class="group-title">取数与诊断</div>
+        <div class="card">
+          <div class="row"><span class="row-icon" data-icon="terminal"></span><div class="row-text"><b>SurfaceFlinger 走 root</b><small>sf_prefer_root</small></div><label class="switch"><input type="checkbox" data-key="sf_prefer_root" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row"><span class="row-icon" data-icon="bug"></span><div class="row-text"><b>FPS 诊断</b><small>数值后显示来源字母</small></div><label class="switch"><input type="checkbox" data-key="fps_debug" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+        </div>
+
+        <div class="group-title">充电与使用统计</div>
+        <div class="card">
+          <div class="row"><span class="row-icon" data-icon="chart"></span><div class="row-text"><b>开启统计</b><small>后台长期记录电池与应用用电</small></div><label class="switch"><input type="checkbox" data-key="stats_enabled" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="slider-block">
+            <div class="slider-head"><span>采样间隔</span><output data-for="stats_interval_sec">15 s</output></div>
+            <div class="slider-wrap"><input type="range" min="5" max="120" step="5" data-key="stats_interval_sec" data-type="i" data-unit=" s"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>5 s</span><span>120 s</span></div>
+          </div>
+          <div class="row"><span class="row-icon" data-icon="bell"></span><div class="row-text"><b>常驻通知</b><small>关掉只是不显示通知，采样照跑</small></div><label class="switch"><input type="checkbox" data-key="stats_notification" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row"><span class="row-icon" data-icon="sun"></span><div class="row-text"><b>仅亮屏时记录</b><small>充电期间自动失效</small></div><label class="switch"><input type="checkbox" data-key="stats_screen_on_only" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+        </div>
+
+        <div class="group-title">本界面外观 <span class="count-pill">不影响 HUD</span></div>
+        <div class="card">
+          <div class="preset-block">
+            <div class="sub-label">主题模式</div>
+            <div class="segmented" id="themeSeg">
+              <button class="seg active" data-mode="auto">跟随系统</button>
+              <button class="seg" data-mode="light">浅色</button>
+              <button class="seg" data-mode="dark">深色</button>
+            </div>
+          </div>
+          <div class="sub-block">
+            <div class="sub-label">动态取色种子</div>
+            <div class="seed-chips" id="seedChips">
+              <button class="seed-chip" data-seed="indigo" style="--sc:#A8C7FF"></button>
+              <button class="seed-chip" data-seed="teal" style="--sc:#7EDBC4"></button>
+              <button class="seed-chip" data-seed="coral" style="--sc:#FFB59E"></button>
+              <button class="seed-chip" data-seed="violet" style="--sc:#D0A8FF"></button>
+              <button class="seed-chip" data-seed="slate" style="--sc:#B9C1D1"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="about">
+          <div><b>NexusFloat · WebUI 设计稿</b><span>LSPosed 模块 · GPLv3</span></div>
+          <p>本页为独立设计原型。字段与 <code>Constants.java</code> / <code>NexusBridge.java</code> 一一对齐，接入 WebView 时替换 <code>NFBridge</code> 即可复用全部交互。</p>
+        </div>
+      </section>
+
+    </div><!-- /scroll -->
+
+    <div class="fab-holder" id="fabHolder" hidden>
+      <button class="fab" id="applyBtn"><span data-icon="check"></span><span id="fabLabel">应用 0 项更改</span></button>
+    </div>
+
+    <nav class="navbar" id="navbar">
+      <button class="nav-item active" data-tab="status"><span class="nav-ind"><span data-icon="home"></span></span><small>状态</small></button>
+      <button class="nav-item" data-tab="modules"><span class="nav-ind"><span data-icon="list"></span></span><small>项目</small></button>
+      <button class="nav-item" data-tab="appearance"><span class="nav-ind"><span data-icon="palette"></span></span><small>外观</small></button>
+      <button class="nav-item" data-tab="advanced"><span class="nav-ind"><span data-icon="sliders"></span></span><small>高级</small></button>
+    </nav>
+  </section>
+
+  <!-- ══════════════ 右：HUD 实时预览舞台 ══════════════ -->
+  <aside class="stage">
+    <div class="stage-head">
+      <div>
+        <div class="stage-eyebrow">LIVE PREVIEW · 状态栏顶部</div>
+        <h2>HUD 实时预览</h2>
+      </div>
+      <div class="stage-tools">
+        <div class="segmented compact" id="orientSeg">
+          <button class="seg active" data-orient="portrait">竖屏</button>
+          <button class="seg" data-orient="landscape">横屏</button>
+        </div>
+        <button class="icon-btn" id="playBtn" title="暂停 / 继续数值模拟"><span data-icon="pause"></span></button>
+      </div>
+    </div>
+
+    <div class="stage-canvas">
+      <div class="device portrait" id="device">
+        <div class="wallpaper"></div>
+        <div class="wallpaper-glow"></div>
+        <div class="status-bar">
+          <span class="sb-time" id="sbTime">06:07</span>
+          <span class="sb-icons">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.8a16 16 0 0 1 20 0M5 12.8a11 11 0 0 1 14 0M8.5 16.8a6 6 0 0 1 7 0"/><path d="M12 21h.01" stroke-width="3"/></svg>
+            <svg viewBox="0 0 24 24" width="14" height="13" fill="currentColor"><path d="M2 17h3v4H2zm5-4h3v8H7zm5-4h3v12h-3zm5-5h3v17h-3z" opacity=".9"/></svg>
+            <svg viewBox="0 0 26 14" width="20" height="12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="21" height="12" rx="3"/><rect x="3" y="3" width="14" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M24 5v4" stroke-linecap="round" stroke-width="2.5"/></svg>
+          </span>
+        </div>
+        <div class="hud" id="hud"></div>
+        <div class="screen-body">
+          <div class="screen-app"><span data-icon="gamepad"></span></div>
+          <div class="screen-lines"><i></i><i></i><i></i></div>
+        </div>
+        <div class="screen-caption">屏幕顶部 · 状态栏区域（HUD 为独立悬浮窗）</div>
+        <div class="hud-hidden" id="hudHidden" hidden>当前屏幕方向已隐藏监视条</div>
+      </div>
+      <div class="stage-legend">
+        <button class="cond-chip" id="condCharge" title="模拟电池充电状态">充电中</button>
+        <button class="cond-chip" id="condScreen" title="模拟亮屏 / 息屏">亮屏</button>
+        <button class="cond-chip" id="condApp" title="模拟当前应用是否在白名单内">白名单内</button>
+        <span class="legend-status" id="legendDir">竖屏 · HUD 可见</span>
+      </div>
+    </div>
+
+    <div class="payload-card">
+      <div class="payload-head">
+        <div><b>配置快照</b><small>perf → Settings.Global · nexusfloat_prefs</small></div>
+        <button class="text-btn" id="copyBtn"><span data-icon="copy"></span>复制命令</button>
+      </div>
+      <pre class="payload" id="payload"></pre>
+    </div>
+  </aside>
+</div>
+
+<!-- ══════════════ Dialog ══════════════ -->
+<div class="scrim" id="scrim" hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <div class="dialog-icon"><span data-icon="save"></span></div>
+    <h2>应用设置</h2>
+    <p id="dlgDesc">以下改动将写入 SharedPreferences("perf") 并发布快照。</p>
+    <div class="dialog-code"><pre id="dlgPayload"></pre></div>
+    <p class="dialog-note">App 内由 NF 桥接写本地 perf 表并调用 publishSettings()，SystemUI 每秒轮询生效；浏览器预览时使用 localStorage 演示。下方 settings 命令仅供诊断。</p>
+    <div class="dialog-actions">
+      <button class="text-btn" id="dlgCancel">取消</button>
+      <button class="filled-btn" id="dlgApply">应用设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 应用白名单选择器 ══════════════ -->
+<div class="scrim" id="appScrim" hidden>
+  <div class="dialog app-dialog" role="dialog" aria-modal="true">
+    <div class="dialog-icon"><span data-icon="list"></span></div>
+    <h2>选择应用</h2>
+    <p>勾选要在哪些应用里显示监视条。列表来自本机已安装应用，不联网。</p>
+    <label class="app-search">
+      <input type="text" id="appSearch" placeholder="搜索应用名或包名" autocomplete="off" spellcheck="false">
+    </label>
+    <label class="app-all"><input type="checkbox" id="appAll"><span>包含无启动图标的系统应用</span></label>
+    <div class="app-list" id="appList"></div>
+    <p class="dialog-note" id="appCount">共 0 个应用</p>
+    <div class="dialog-actions">
+      <button class="text-btn" id="appClear">清空勾选</button>
+      <button class="text-btn" id="appPickCancel">取消</button>
+      <button class="filled-btn" id="appPickApply">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="snackbar" id="snackbar" hidden></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   NexusFloat WebUI · 交互层（全新设计稿）
+   ───────────────────────────────────────────────────────────────────────────────
+   字段来源：Constants.java / NexusBridge.java（SharedPreferences "perf"）
+   接入点：NFBridge —— 浏览器用 localStorage 演示；App 内 WebView 用 window.NF
+           （NFPrefsBridge / addJavascriptInterface）写 perf 表并 publishSettings()。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ───────────────────────── 1. 图标（Lucide 线性，24 视口） ───────────────────────── */
+const P = {
+  activity:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  palette:'<circle cx="13.5" cy="6.5" r=".8" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10.5" r=".8" fill="currentColor" stroke="none"/><circle cx="8.5" cy="7.5" r=".8" fill="currentColor" stroke="none"/><circle cx="6.5" cy="12.5" r=".8" fill="currentColor" stroke="none"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.6-1.4-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h1.6A5.5 5.5 0 0 0 22 9.8C22 5.5 17.5 2 12 2Z"/>',
+  rotate:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/>',
+  cpu:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>',
+  gpu:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M8 20h8M7 12h3m4 0h3"/>',
+  memory:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4M6 18v2M18 18v2"/>',
+  layers:'<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5M2 17l10 5 10-5"/>',
+  thermometer:'<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/>',
+  zap:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
+  pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+  gauge:'<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+  cputemp:'<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M12 9v4M12 16h.01M9 2v3M15 2v3"/>',
+  wifi:'<path d="M2 8.8a16 16 0 0 1 20 0M5 12.8a11 11 0 0 1 14 0M8.5 16.8a6 6 0 0 1 7 0"/><path d="M12 21h.01" stroke-width="3"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  smartphone:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/>',
+  landscape:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M8 19h8"/>',
+  battery:'<rect x="1" y="6" width="20" height="12" rx="3"/><path d="M23 10v4"/><rect x="4" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/>',
+  filter:'<path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/>',
+  refresh:'<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>',
+  bar:'<path d="M4 19V11M9 19V5M14 19v-9M19 19V8"/>',
+  bold:'<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7Zm0 7h7a3.5 3.5 0 0 1 0 7H7Z"/>',
+  contrast:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18" fill="currentColor" stroke="none" opacity=".55"/>',
+  square:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/>',
+  terminal:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m6 9 3 3-3 3M12 15h5"/>',
+  bug:'<rect x="8" y="6" width="8" height="14" rx="4"/><path d="M8 11H4m16 0h-4M8 16H4m16 0h-4M9 6 7 3m8 3 2-3"/>',
+  chart:'<path d="M3 3v18h18"/><path d="m7 15 4-5 3 3 5-7"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9Z"/><path d="M10 21h4"/>',
+  home:'<path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 21v-7h6v7"/>',
+  list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  sliders:'<path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h9m4 0h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/>',
+  check:'<path d="m4 12 5 5L20 6"/>',
+  chevron:'<path d="m6 9 6 6 6-6"/>',
+  arrowUp:'<path d="m6 15 6-6 6 6"/>',
+  arrowDown:'<path d="m6 9 6 6 6-6"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  pause:'<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/>',
+  play:'<path d="m7 4 13 8-13 8V4Z" fill="currentColor" stroke="none"/>',
+  gamepad:'<path d="M6 12h4m-2-2v4"/><circle cx="16" cy="11" r=".8" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r=".8" fill="currentColor" stroke="none"/><path d="M17.3 5H6.7A4.7 4.7 0 0 0 2 9.7c0 2 1.1 3.4 2.5 4.6.9.8 1.3 1.3 1.5 2.3l.4 1.8A2.4 2.4 0 0 0 8.8 20h6.4a2.4 2.4 0 0 0 2.4-2.4l.4-1.8c.2-1 .6-1.5 1.5-2.3A5.9 5.9 0 0 0 22 9.7 4.7 4.7 0 0 0 17.3 5Z"/>',
+  shield:'<path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5Z"/><path d="m9 12 2 2 4-4"/>',
+};
+function svg(name, size){
+  const d = P[name] || P.square;
+  return `<svg viewBox="0 0 24 24" ${size?`width="${size}" height="${size}"`:''} fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+}
+function mountIcons(root){
+  (root||document).querySelectorAll('[data-icon]').forEach(el=>{
+    el.innerHTML = svg(el.dataset.icon);
+    delete el.dataset.icon;
+  });
+}
+
+/* ───────────────────────── 2. 字段表（对齐 Constants.java） ───────────────────────── */
+const DEFAULTS = {
+  // 显示时机
+  show_portrait:true, show_landscape:true, show_screen_off:false, show_charging_only:false,
+  app_filter:false, app_whitelist:'',
+  // 模块开关
+  mod_clock:false, mod_clock_24h:true, mod_cpu:true, mod_cpu_freq:false,
+  mod_gpu:true, mod_gpu_freq:false, mod_ram:false, mod_zram:false,
+  mod_temp:false, mod_power:true, mod_current:false, mod_fps:true,
+  mod_cpu_temp:false, mod_net:false,
+  // 自定义名称（空 = 显示 Lucide 图标）
+  name_mod_cpu:'', name_mod_gpu:'', name_mod_ram:'', name_mod_zram:'',
+  name_mod_temp:'', name_mod_power:'', name_mod_current:'', name_mod_fps:'',
+  name_mod_cpu_temp:'', name_mod_net:'',
+  // 顺序与空格
+  module_order:'0,2,4,6,7,8,9,10,11,12,13', space_before:'',
+  // 外观
+  cpu_bar:true, gpu_bar:true, mod_background:false, auto_contrast:false,
+  text_color:0, font_size_sp:7, font_bold:true, spacing_dp:8,
+  offset_x:0, offset_y:0,
+  // 采样 / 电源
+  update_interval_ms:1000, wake_interval_sec:15, dual_cell:false,
+  // FPS 来源（默认高通预设）
+  fps_src_panel:true, fps_src_sf_latency:false, fps_src_sf_timestats:true,
+  fps_src_fpsgo:false, fps_src_ged:false, fps_src_vsync:false,
+  sf_prefer_root:false, fps_debug:false,
+  // 统计
+  stats_enabled:true, stats_interval_sec:15, stats_notification:true, stats_screen_on_only:false,
+  // 仅本界面
+  app_theme:0,
+};
+const TYPES = {
+  text_color:'i', font_size_sp:'f', spacing_dp:'f', offset_x:'i', offset_y:'i',
+  update_interval_ms:'i', wake_interval_sec:'i', stats_interval_sec:'i', app_theme:'i',
+};
+const keyType = k => TYPES[k] || (typeof DEFAULTS[k] === 'boolean' ? 'b' : 's');
+const TEXT_COLORS = ['#FFFFFF','#111111','#6DB0FF','#34D399','#FBBF24','#F87171','#C084FC','#22D3EE'];
+const TEXT_COLOR_NAMES = ['白','黑','蓝','绿','黄','红','紫','青'];
+
+const MODULES = [
+  {idx:0,  key:'mod_clock',    label:'时间',     icon:'clock',       sub:[{key:'mod_clock_24h',label:'24 小时制'}]},
+  {idx:2,  key:'mod_cpu',      label:'CPU',      icon:'cpu',         nameKey:'name_mod_cpu',      sub:[{key:'mod_cpu_freq',label:'显示 CPU 频率'}]},
+  {idx:4,  key:'mod_gpu',      label:'GPU',      icon:'gpu',         nameKey:'name_mod_gpu',      sub:[{key:'mod_gpu_freq',label:'显示 GPU 频率'}]},
+  {idx:6,  key:'mod_ram',      label:'RAM',      icon:'memory',      nameKey:'name_mod_ram'},
+  {idx:7,  key:'mod_zram',     label:'ZRAM',     icon:'layers',      nameKey:'name_mod_zram'},
+  {idx:8,  key:'mod_temp',     label:'温度',     icon:'thermometer', nameKey:'name_mod_temp'},
+  {idx:9,  key:'mod_power',    label:'功率',     icon:'zap',         nameKey:'name_mod_power'},
+  {idx:10, key:'mod_current',  label:'电流',     icon:'pulse',       nameKey:'name_mod_current'},
+  {idx:11, key:'mod_fps',      label:'FPS',      icon:'gauge',       nameKey:'name_mod_fps'},
+  {idx:12, key:'mod_cpu_temp', label:'CPU温度',  icon:'cputemp',     nameKey:'name_mod_cpu_temp'},
+  {idx:13, key:'mod_net',      label:'网速',     icon:'wifi',        nameKey:'name_mod_net'},
+];
+const byKey = k => MODULES.find(m=>m.key===k);
+
+/* ───────────────────────── 3. 状态 + 桥接层 ───────────────────────── */
+const LS_KEY = 'nexusfloat.webui.design.v1';
+let state = {...DEFAULTS};
+let baseline = {...DEFAULTS};
+const ui = {tab:'status', orient:'portrait', playing:true, seed:'indigo', mode:'auto',
+            cond:{charge:true, screen:true, app:true}};
+
+const hasNative = () => (typeof window.NF !== 'undefined' && window.NF) ? window.NF : null;
+
+const NFBridge = {
+  /* 两套后端共用同一套交互：
+     · 浏览器 / 设计预览    → localStorage 演示
+     · App 内 WebView       → window.NF（NFPrefsBridge，addJavascriptInterface 注入）
+       read 从真实 perf 表回读；write 本地 + Remote 双写并防抖 publish；
+       publish 立即把整表推到 Settings.Global。SystemUI 每秒轮询生效。 */
+  read(){
+    let cached = {};
+    try{ cached = JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){}
+    const nf = hasNative();
+    if(nf){
+      try{
+        const j = JSON.parse(nf.dump());
+        // 界面偏好（主题种子、舞台条件）仍存 localStorage；
+        // 设置值一律以设备上的 perf 表为准，baseline 同值 = 无未应用改动。
+        return { state:j.state||{}, baseline:j.state||{}, ui:cached.ui||{} };
+      }catch(e){}
+    }
+    return cached;
+  },
+  write(s,b){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({state:s, baseline:b, ui:ui})); }catch(e){}
+    const nf = hasNative();
+    if(nf){ try{ nf.commit(JSON.stringify(s)); }catch(e){} }
+  },
+  publish(lines){
+    const nf = hasNative();
+    if(nf){ try{ return !!nf.publish(); }catch(e){ return false; } }
+    return true;   // 浏览器演示：本地已保存
+  },
+  installedApps(includeAll){
+    const nf = hasNative();
+    if(!nf || !nf.installedApps) return null;
+    try{ return JSON.parse(nf.installedApps(!!includeAll)); }catch(e){ return null; }
+  },
+  gpuInfo(){
+    const nf = hasNative();
+    if(!nf || !nf.gpuInfo) return null;
+    try{ return JSON.parse(nf.gpuInfo()); }catch(e){ return null; }
+  },
+  toast(msg){
+    const nf = hasNative();
+    if(nf && nf.toast){ try{ nf.toast(msg); return; }catch(e){} }
+    toast(msg);
+  },
+  toBase64(text){
+    return btoa(unescape(encodeURIComponent(text))).replace(/\s/g,'');
+  }
+};
+
+function load(){
+  const d = NFBridge.read();
+  if(d.state) state = {...DEFAULTS, ...d.state};
+  if(d.baseline) baseline = {...DEFAULTS, ...d.baseline};
+  if(d.ui) Object.assign(ui, d.ui);
+}
+function persist(){ NFBridge.write(state, baseline); }
+function setKey(k,v){ state[k]=v; onStateChange(); }
+function changedKeys(){
+  return Object.keys(DEFAULTS).filter(k => String(state[k]) !== String(baseline[k]));
+}
+function snapshotLines(){
+  return Object.keys(state).sort().map(k=>{
+    let v = state[k];
+    if(typeof v === 'string') v = v.replace(/\n/g,' ');   // 白名单换行 → 空格
+    return `${k}=${keyType(k)}:${v}`;
+  });
+}
+function snapshotText(){ return snapshotLines().join('\n') + '\n'; }
+function shellCommand(){ return `settings put global nexusfloat_prefs '${NFBridge.toBase64(snapshotText())}'`; }
+
+/* ───────────────────────── 4. 主题 / 动态取色 ───────────────────────── */
+const SEEDS = {
+  indigo:{h:218,s:85}, teal:{h:168,s:55}, coral:{h:16,s:82},
+  violet:{h:278,s:66}, slate:{h:220,s:16},
+};
+function applyPalette(){
+  const {h,s} = SEEDS[ui.seed] || SEEDS.indigo;
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const c = (hh,ss,ll) => `hsl(${hh} ${ss}% ${ll}%)`;
+  const h3 = (h+58)%360;
+  const t = dark ? {
+    primary:c(h,s*.88,81), onPrimary:c(h,s*.6,16), primaryContainer:c(h,s*.5,31), onPrimaryContainer:c(h,s*.72,91),
+    secondary:c(h,18,82), onSecondary:c(h,20,20), secondaryContainer:c(h,14,26), onSecondaryContainer:c(h,24,89),
+    tertiary:c(h3,60,81), onTertiary:c(h3,50,20), tertiaryContainer:c(h3,32,31), onTertiaryContainer:c(h3,65,92),
+    surface:c(h,16,7), surfaceDim:c(h,16,5), surfaceBright:c(h,14,18),
+    scLowest:c(h,16,4), scLow:c(h,15,10), sc:c(h,14,13), scHigh:c(h,13,18), scHighest:c(h,12,23),
+    onSurface:c(h,15,92), onSurfaceVariant:c(h,12,74), outline:c(h,10,58), outlineVariant:c(h,11,27),
+    inverseSurface:c(h,15,91), inverseOnSurface:c(h,12,20),
+    error:'#FFB4AB', onError:'#690005', success:'#7EDBC4', warning:'#FFC37E',
+  } : {
+    primary:c(h,s*.62,40), onPrimary:'#FFFFFF', primaryContainer:c(h,s*.72,90), onPrimaryContainer:c(h,s*.65,18),
+    secondary:c(h,14,40), onSecondary:'#FFFFFF', secondaryContainer:c(h,26,90), onSecondaryContainer:c(h,20,18),
+    tertiary:c(h3,45,42), onTertiary:'#FFFFFF', tertiaryContainer:c(h3,60,91), onTertiaryContainer:c(h3,45,20),
+    surface:c(h,30,99), surfaceDim:c(h,18,90), surfaceBright:c(h,30,99),
+    scLowest:'#FFFFFF', scLow:c(h,26,97), sc:c(h,22,94), scHigh:c(h,20,92), scHighest:c(h,18,88),
+    onSurface:c(h,18,12), onSurfaceVariant:c(h,12,32), outline:c(h,10,48), outlineVariant:c(h,16,82),
+    inverseSurface:c(h,18,19), inverseOnSurface:c(h,20,96),
+    error:'#B3261E', onError:'#FFFFFF', success:'#0F7B62', warning:'#9A5B00',
+  };
+  const map = {
+    'primary':t.primary,'on-primary':t.onPrimary,'primary-container':t.primaryContainer,'on-primary-container':t.onPrimaryContainer,
+    'secondary':t.secondary,'on-secondary':t.onSecondary,'secondary-container':t.secondaryContainer,'on-secondary-container':t.onSecondaryContainer,
+    'tertiary':t.tertiary,'on-tertiary':t.onTertiary,'tertiary-container':t.tertiaryContainer,'on-tertiary-container':t.onTertiaryContainer,
+    'surface':t.surface,'surface-dim':t.surfaceDim,'surface-bright':t.surfaceBright,
+    'surface-container-lowest':t.scLowest,'surface-container-low':t.scLow,'surface-container':t.sc,
+    'surface-container-high':t.scHigh,'surface-container-highest':t.scHighest,
+    'on-surface':t.onSurface,'on-surface-variant':t.onSurfaceVariant,'outline':t.outline,'outline-variant':t.outlineVariant,
+    'inverse-surface':t.inverseSurface,'inverse-on-surface':t.inverseOnSurface,
+    'error':t.error,'on-error':t.onError,'success':t.success,'warning':t.warning,
+  };
+  // KSU 管理器若已注入动态取色（内联 style），优先用宿主的
+  const host = document.documentElement.style.getPropertyValue('--md-sys-color-primary').trim();
+  if(host && window.ksu) return;
+  const root = document.documentElement;
+  Object.entries(map).forEach(([k,v])=>root.style.setProperty(`--md-sys-color-${k}`,v));
+  document.querySelector('meta[name="theme-color"]').setAttribute('content',t.surface);
+}
+function resolveTheme(){
+  const dark = ui.mode === 'dark' || (ui.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+            || (ui.mode === 'auto' && !matchMedia('(prefers-color-scheme: light)').matches);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  applyPalette();
+}
+
+/* ───────────────────────── 5. 控件同步 ───────────────────────── */
+function fmtSlider(k,v){
+  if(k === 'update_interval_ms') return (v/1000).toFixed(1)+' s';
+  if(k === 'wake_interval_sec') return v === 0 ? '关闭' : v+' s';
+  const el = document.querySelector(`input[data-key="${k}"]`);
+  return v + (el ? (el.dataset.unit||'') : '');
+}
+function syncInputs(){
+  document.querySelectorAll('[data-key]').forEach(el=>{
+    const k = el.dataset.key, v = state[k];
+    if(el.type === 'checkbox') el.checked = !!v;
+    else if(el.type === 'range'){
+      el.value = v;
+      const p = ((+el.value - +el.min) / (+el.max - +el.min) * 100).toFixed(2) + '%';
+      el.parentElement.style.setProperty('--p', p);
+      const tip = el.parentElement.querySelector('.slider-tip');
+      if(tip) tip.textContent = fmtSlider(k,v);
+      const out = document.querySelector(`output[data-for="${k}"]`);
+      if(out) out.textContent = fmtSlider(k,v);
+    } else el.value = v;
+  });
+
+  // 色板（text_color 是 int，不是 input）
+  document.querySelectorAll('#swatches .swatch').forEach(b=>b.classList.toggle('active', +b.dataset.value === state.text_color));
+  const sw = document.getElementById('swatches');
+  const colorLocked = state.auto_contrast || state.mod_background;
+  sw.classList.toggle('is-disabled', state.auto_contrast);
+  document.getElementById('contrastRow').classList.toggle('is-disabled', state.mod_background);
+  const contrastInput = document.querySelector('input[data-key="auto_contrast"]');
+  contrastInput.disabled = !!state.mod_background;
+  const bgNote = document.getElementById('contrastHint');
+  bgNote.textContent = state.auto_contrast
+    ? '自动反色已接管文字颜色：深色壁纸用浅色字，浅色壁纸用深色字。色板暂不可用。'
+    : (state.mod_background ? '已显示背景，自动反色按 App 行为置灰；文字颜色由色板决定。'
+                            : '开启后字体颜色由系统决定，色板不可用；与「显示背景」互斥。');
+  document.getElementById('whitelistWrap').hidden = !state.app_filter;
+
+  // 主题段
+  document.querySelectorAll('#themeSeg .seg').forEach(b=>b.classList.toggle('active',
+    ({auto:0,light:1,dark:2})[b.dataset.mode] === state.app_theme));
+  document.querySelectorAll('#seedChips .seed-chip').forEach(b=>b.classList.toggle('active', b.dataset.seed === ui.seed));
+  const fpsFlags = ['fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats','fps_src_fpsgo','fps_src_ged','fps_src_vsync']
+    .map(k=>state[k]?1:0).join('');
+  const presetOf = {'111111':'all','101000':'qualcomm','011110':'mediatek'};
+  document.querySelectorAll('#presetSeg .seg').forEach(b=>b.classList.toggle('active', presetOf[fpsFlags] === b.dataset.preset));
+
+  // 状态卡
+  document.getElementById('statInterval').textContent = (state.update_interval_ms/1000).toFixed(1)+' s';
+  const enabled = MODULES.filter(m=>state[m.key]).length;
+  document.getElementById('statModules').textContent = enabled+' / 11';
+  document.getElementById('modCount').textContent = enabled+' 项启用';
+
+  // FAB + 快照
+  const dirty = changedKeys();
+  document.getElementById('fabHolder').hidden = dirty.length === 0;
+  document.getElementById('fabLabel').textContent = `应用 ${dirty.length} 项更改`;
+  const payload = document.getElementById('payload');
+  payload.innerHTML = snapshotLines().map(l=>{
+    const i = l.indexOf('=');
+    return `<span class="k">${esc(l.slice(0,i))}</span>=<span class="v">${esc(l.slice(i+1))}</span>`;
+  }).join('\n');
+  renderHUD();
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function onStateChange(){
+  persist(); syncInputs();
+}
+
+/* ───────────────────────── 6. 监视项目列表 ───────────────────────── */
+function orderArr(){ return state.module_order.split(',').map(Number).filter(n=>MODULES.some(m=>m.idx===n)); }
+function parseSpaces(str){
+  const map = {};
+  String(str||'').split(/[,，]/).forEach(part=>{
+    const m = part.trim().match(/^(.+?)\s*([0-9])$/);
+    if(!m) return;
+    const mod = MODULES.find(x=>x.label.toLowerCase()===m[1].toLowerCase() || x.key.toLowerCase()===m[1].toLowerCase());
+    if(mod) map[mod.key] = Math.min(9,Math.max(0,+m[2]));
+  });
+  return map;
+}
+function serializeSpaces(map){
+  return MODULES.filter(m=>map[m.key]>0).map(m=>m.label+map[m.key]).join(',');
+}
+function renderModules(){
+  const open = new Set([...document.querySelectorAll('.mod-item.open')].map(el=>el.dataset.mod));
+  const box = document.getElementById('moduleList');
+  const spaces = parseSpaces(state.space_before);
+  const arr = orderArr();
+  box.innerHTML = arr.map((idx,i)=>{
+    const m = MODULES.find(x=>x.idx===idx);
+    const on = !!state[m.key];
+    const name = m.nameKey ? (state[m.nameKey]||'') : '';
+    return `<div class="mod-item ${on?'on':''} ${open.has(m.key)?'open':''}" data-mod="${m.key}">
+      <div class="mod-main">
+        <div class="mod-drag">
+          <button class="mini-btn" data-move="${i}" data-dir="-1" ${i===0?'disabled':''} title="上移">${svg('arrowUp')}</button>
+          <button class="mini-btn" data-move="${i}" data-dir="1" ${i===arr.length-1?'disabled':''} title="下移">${svg('arrowDown')}</button>
+        </div>
+        <span class="mod-icon">${svg(m.icon)}</span>
+        <div class="mod-info" data-expand="${m.key}">
+          <b>${m.label}</b><small>${m.key}</small>
+        </div>
+        <div class="mod-tools">
+          <span class="key-hint">${name ? esc(name) : '图标'}</span>
+          <button class="mod-expand" data-expand="${m.key}" title="展开">${svg('chevron')}</button>
+          <label class="switch"><input type="checkbox" data-key="${m.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+        </div>
+      </div>
+      <div class="mod-detail"><div class="mod-detail-inner"><div class="mod-detail-pad">
+        ${m.nameKey ? `<div class="mod-name-field"><span>显示名称</span><input type="text" maxlength="6" data-key="${m.nameKey}" data-type="s" placeholder="留空 = 显示图标"></div>`:''}
+        ${(m.sub||[]).map(s=>`<div class="mod-sub"><b>${s.label}</b><label class="switch"><input type="checkbox" data-key="${s.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>`).join('')}
+        <div class="mod-name-field"><span>前置空格</span>
+          <select data-space="${m.key}" style="flex:1;height:34px;padding:0 10px;border-radius:8px;border:1px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container);font-size:12px">
+            ${Array.from({length:10},(_,n)=>`<option value="${n}" ${(spaces[m.key]||0)===n?'selected':''}>${n} 个空格</option>`).join('')}
+          </select>
+        </div>
+      </div></div></div>
+    </div>`;
+  }).join('');
+  // 展开状态：重新绑定事件（整块重绘）
+  box.querySelectorAll('[data-expand]').forEach(el=>el.addEventListener('click',()=>{
+    const item = el.closest('.mod-item');
+    item.classList.toggle('open');
+  }));
+  box.querySelectorAll('[data-move]').forEach(btn=>btn.addEventListener('click',e=>{
+    e.stopPropagation();
+    const i = +btn.dataset.move, dir = +btn.dataset.dir, a = orderArr();
+    const j = i + dir;
+    if(j<0 || j>=a.length) return;
+    [a[i],a[j]] = [a[j],a[i]];
+    setKey('module_order', a.join(','));
+    renderModules(); syncInputs();
+  }));
+  box.querySelectorAll('[data-space]').forEach(sel=>sel.addEventListener('change',()=>{
+    const map = parseSpaces(state.space_before);
+    map[sel.dataset.space] = +sel.value;
+    setKey('space_before', serializeSpaces(map));
+  }));
+  bindInputs(box);
+  syncInputs();
+}
+
+/* ───────────────────────── 7. HUD 实时渲染 ───────────────────────── */
+const sim = {cpu:34,gpu:62,ram:71,zram:18,temp:36.2,power:-4.8,current:-1180,
+             fps:119,cputemp:48,net:1.24, cores:[22,41,18,56,33,29,47,25]};
+let simTimer = null;
+function jitter(v,amt,min,max){ return Math.min(max,Math.max(min, v+(Math.random()-.5)*amt)); }
+function tickSim(){
+  sim.cpu = jitter(sim.cpu,10,3,96);
+  sim.gpu = jitter(sim.gpu,9,2,99);
+  sim.ram = jitter(sim.ram,1.2,58,88);
+  sim.zram = jitter(sim.zram,1.5,8,36);
+  sim.temp = jitter(sim.temp,.6,29,43);
+  sim.power = jitter(sim.power,2.2,-18,24);
+  sim.current = jitter(sim.current,380,-4200,5100);
+  sim.fps = jitter(sim.fps,5,58,121);
+  sim.cputemp = jitter(sim.cputemp,2,36,72);
+  sim.net = jitter(sim.net,.8,0,9.9);
+  sim.cores = sim.cores.map(v=>jitter(v,18,4,98));
+  renderHUD();
+}
+function restartSim(){
+  if(simTimer) clearInterval(simTimer);
+  if(ui.playing) simTimer = setInterval(tickSim, Math.max(300, state.update_interval_ms));
+}
+function hudValue(k){
+  const d = state.dual_cell ? 2 : 1;
+  switch(k){
+    case 'mod_clock': {
+      const d2 = new Date();
+      if(state.mod_clock_24h) return `${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`;
+      const h = d2.getHours()%12 || 12;
+      return `${h}:${String(d2.getMinutes()).padStart(2,'0')} ${d2.getHours()<12?'AM':'PM'}`;
+    }
+    case 'mod_cpu': return Math.round(sim.cpu)+'%';
+    case 'mod_gpu': return Math.round(sim.gpu)+'%';
+    case 'mod_ram': return Math.round(sim.ram)+'%';
+    case 'mod_zram': return Math.round(sim.zram)+'%';
+    case 'mod_temp': return sim.temp.toFixed(1)+'°';
+    case 'mod_power': return (sim.power*d).toFixed(1)+'W';
+    case 'mod_current': return Math.round(sim.current*d)+'mA';
+    case 'mod_fps': return Math.round(sim.fps)+(state.fps_debug?'p':'');
+    case 'mod_cpu_temp': return Math.round(sim.cputemp)+'°';
+    case 'mod_net': return sim.net.toFixed(2)+'MB/s';
+  }
+  return '--';
+}
+function hudBars(k){
+  if(k==='mod_cpu' && state.cpu_bar && state.mod_cpu){
+    return `<span class="bars">${sim.cores.map(v=>`<i class="${v>85?'hi':''}" style="--v:${Math.max(12,v).toFixed(0)}%"></i>`).join('')}</span>`;
+  }
+  if(k==='mod_gpu' && state.gpu_bar && state.mod_gpu){
+    return `<span class="bars"><i class="${sim.gpu>85?'hi':''}" style="--v:${Math.max(12,sim.gpu).toFixed(0)}%"></i></span>`;
+  }
+  return '';
+}
+function hudFreq(k){
+  if(k==='mod_cpu' && state.mod_cpu_freq) return '<span class="sub">(0.7-4.3)</span>';
+  if(k==='mod_gpu' && state.mod_gpu_freq) return `<span class="sub">(${Math.round(420+sim.gpu*6)})</span>`;
+  return '';
+}
+function hudVisibility(){
+  const reasons = [];
+  if(ui.orient === 'portrait' && !state.show_portrait) reasons.push('竖屏已关闭');
+  if(ui.orient === 'landscape' && !state.show_landscape) reasons.push('横屏已关闭');
+  if(!ui.cond.screen && !state.show_screen_off) reasons.push('息屏隐藏');
+  if(!ui.cond.charge && state.show_charging_only) reasons.push('未在充电');
+  if(!ui.cond.app && state.app_filter) reasons.push('应用不在白名单');
+  return reasons;
+}
+function renderHUD(){
+  const hud = document.getElementById('hud');
+  const scale = 2.05;
+  const fs = state.font_size_sp * scale;
+  hud.style.setProperty('--hud-fs', fs.toFixed(1)+'px');
+  hud.style.setProperty('--hud-fw', state.font_bold ? '700' : '400');
+  hud.style.setProperty('--hud-stroke', state.font_bold ? '2.25' : '2');
+  hud.style.setProperty('--hud-gap', (state.spacing_dp*scale*.75).toFixed(1)+'px');
+  hud.style.setProperty('--hud-inner-gap', (2*scale).toFixed(1)+'px');
+  hud.style.setProperty('--hud-icon', (fs*1.1).toFixed(1)+'px');
+  hud.style.setProperty('--hud-bar-h', (fs*.9).toFixed(1)+'px');
+  hud.style.setProperty('--hud-space-w', (fs*.42).toFixed(1)+'px');
+  hud.style.setProperty('--hud-x', (state.offset_x/3).toFixed(1)+'px');
+  hud.style.setProperty('--hud-y', (state.offset_y/6).toFixed(1)+'px');
+  hud.style.setProperty('--hud-bg', state.mod_background ? 'rgba(48,48,48,.70)' : 'transparent');
+  hud.style.setProperty('--hud-pad', state.mod_background ? '3px 8px' : '0');
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const color = state.auto_contrast ? (dark ? '#F2F5FF' : '#111111') : TEXT_COLORS[state.text_color];
+  hud.style.setProperty('--hud-color', color);
+
+  const spaces = parseSpaces(state.space_before);
+  const html = orderArr().map(idx=>{
+    const m = MODULES.find(x=>x.idx===idx);
+    if(!state[m.key]) return '';
+    const nm = m.nameKey ? state[m.nameKey] : '';
+    const lead = m.key==='mod_clock' ? '' : (nm ? `<span class="label">${esc(nm)}</span>` : svg(m.icon));
+    const sp = (spaces[m.key]||0) > 0
+      ? `<span class="hud-space" style="width:${(fs*.42*spaces[m.key]).toFixed(1)}px"></span>` : '';
+    return `${sp}<span class="mi">${lead}${hudBars(m.key)}<span class="num">${hudValue(m.key)}</span>${hudFreq(m.key)}</span>`;
+  }).filter(Boolean).join('');
+  hud.innerHTML = html || '<span class="mi"><span class="num">未启用任何项目</span></span>';
+
+  const reasons = hudVisibility();
+  hud.hidden = reasons.length > 0;
+  const hid = document.getElementById('hudHidden');
+  hid.hidden = reasons.length === 0;
+  hid.textContent = reasons.length ? `监视条已隐藏 · ${reasons.join(' / ')}` : '';
+  document.getElementById('sbTime').textContent =
+    ui.orient==='portrait' ? hudValue('mod_clock').replace(/ AM| PM/,'') : hudValue('mod_clock').replace(/ AM| PM/,'');
+  document.getElementById('legendDir').textContent =
+    `${ui.orient==='portrait'?'竖屏':'横屏'} · ${reasons.length?'HUD 隐藏':'HUD 可见'} · ${enabledPresetName()}`;
+}
+function enabledPresetName(){
+  const f = ['fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats','fps_src_fpsgo','fps_src_ged','fps_src_vsync'].map(k=>state[k]?1:0).join('');
+  if(f==='111111') return 'FPS 全部来源';
+  if(f==='101000') return 'FPS 高通预设';
+  if(f==='011110') return 'FPS 联发科预设';
+  return 'FPS 自定义';
+}
+
+/* ───────────────────────── 8. 事件绑定 ───────────────────────── */
+function bindInputs(root){
+  (root||document).querySelectorAll('[data-key]').forEach(el=>{
+    if(el.dataset.bound) return;
+    el.dataset.bound = '1';
+    const k = el.dataset.key;
+    const handler = ()=>{
+      let v;
+      if(el.type === 'checkbox') v = el.checked;
+      else if(el.type === 'range') v = keyType(k)==='f' ? parseFloat(el.value) : parseInt(el.value,10);
+      else v = el.value;
+      setKey(k,v);
+      if(k === 'update_interval_ms') restartSim();
+      if(k === 'space_before') syncSpaceSelects();
+    };
+    el.addEventListener(el.tagName === 'TEXTAREA' || el.type === 'text' ? 'input' : 'change', handler);
+    if(el.type === 'range') el.addEventListener('input', ()=>{
+      const p = ((+el.value - +el.min)/(+el.max - +el.min)*100).toFixed(2)+'%';
+      el.parentElement.style.setProperty('--p',p);
+      const tip = el.parentElement.querySelector('.slider-tip');
+      if(tip) tip.textContent = fmtSlider(k, el.value);
+    });
+  });
+}
+function syncSpaceSelects(){
+  const map = parseSpaces(state.space_before);
+  document.querySelectorAll('[data-space]').forEach(s=>s.value = map[s.dataset.space]||0);
+}
+
+function toast(msg){
+  const el = document.getElementById('snackbar');
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{el.hidden = true;}, 2600);
+}
+function switchTab(tab){
+  ui.tab = tab; persist();
+  document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
+  const names = {status:'控制台',modules:'监视项目',appearance:'外观与校正',advanced:'高级设置'};
+  document.getElementById('topbarSub').textContent = names[tab];
+  document.getElementById('scroll').scrollTop = 0;
+}
+/* ───────────────── 真实 GPU 读数（仅 App WebView 内） ───────────────── */
+function startGpuPolling(){
+  const first = NFBridge.gpuInfo();
+  if(!first) return;                       // 浏览器预览：保留原来的静态文案
+  const freqEl = document.getElementById('statGpu');
+  const subEl  = document.getElementById('statusSub');
+  const apply = g=>{
+    if(!g) return;
+    if(freqEl) freqEl.textContent =
+      (g.freqMhz > 0 ? g.freqMhz + ' MHz' : 'N/A') + ' · ' +
+      (g.usagePercent >= 0 ? g.usagePercent + ' %' : 'N/A');
+    if(subEl) subEl.textContent = g.source || '设置通道已连接';
+  };
+  apply(first);
+  setInterval(()=>apply(NFBridge.gpuInfo()), 1000);
+}
+
+/* ───────────────── 应用白名单选择器 ───────────────── */
+let appPickerData = [];
+function currentWhitelist(){
+  return new Set(String(state.app_whitelist||'').split(/[\n,\s]+/).filter(Boolean));
+}
+function renderAppList(query, selected){
+  const box = document.getElementById('appList');
+  if(!box) return;
+  const q = String(query||'').trim().toLowerCase();
+  const rows = appPickerData.filter(a =>
+    !q || a.label.toLowerCase().includes(q) || a.pkg.toLowerCase().includes(q));
+  box.innerHTML = rows.length ? rows.map(a=>`
+    <label class="app-row">
+      <input type="checkbox" value="${esc(a.pkg)}" ${selected.has(a.pkg)?'checked':''}>
+      <span class="app-row-text"><b>${esc(a.label)}</b><small>${esc(a.pkg)}</small></span>
+    </label>`).join('') : '<p class="app-empty">没有匹配的应用</p>';
+}
+function openAppPicker(){
+  const all = document.getElementById('appAll');
+  const list = NFBridge.installedApps(!!all && all.checked);
+  if(!list){ NFBridge.toast('应用列表仅在 App 内可用'); return; }
+  appPickerData = list;
+  const sel = currentWhitelist();
+  renderAppList(document.getElementById('appSearch').value, sel);
+  document.getElementById('appCount').textContent = `共 ${list.length} 个应用 · 已选 ${sel.size} 个`;
+  document.getElementById('appScrim').hidden = false;
+}
+function bindAppPicker(){
+  const scrim = document.getElementById('appScrim');
+  if(!scrim) return;
+  const listEl = document.getElementById('appList');
+  const searchEl = document.getElementById('appSearch');
+  const allEl = document.getElementById('appAll');
+  const countEl = document.getElementById('appCount');
+  const checkedPkgs = () => new Set(
+    [...document.querySelectorAll('#appList input:checked')].map(i=>i.value));
+
+  document.getElementById('pickAppsBtn').addEventListener('click', openAppPicker);
+  searchEl.addEventListener('input', ()=>renderAppList(searchEl.value, checkedPkgs()));
+  allEl.addEventListener('change', ()=>{
+    const list = NFBridge.installedApps(allEl.checked);
+    if(!list) return;
+    const picked = checkedPkgs();
+    appPickerData = list;
+    renderAppList(searchEl.value, picked);
+    countEl.textContent = `共 ${list.length} 个应用 · 已选 ${picked.size} 个`;
+  });
+  listEl.addEventListener('change', ()=>{
+    countEl.textContent = `共 ${appPickerData.length} 个应用 · 已选 ${checkedPkgs().size} 个`;
+  });
+  document.getElementById('appPickCancel').addEventListener('click',()=>scrim.hidden = true);
+  scrim.addEventListener('click',e=>{ if(e.target === scrim) scrim.hidden = true; });
+  document.getElementById('appClear').addEventListener('click',()=>{
+    document.querySelectorAll('#appList input:checked').forEach(i=>i.checked = false);
+    listEl.dispatchEvent(new Event('change'));
+  });
+  document.getElementById('appPickApply').addEventListener('click',()=>{
+    const picked = [...document.querySelectorAll('#appList input:checked')].map(i=>i.value);
+    // 保留手填但不在列表里的包名（例如已卸载应用、系统组件）
+    const listed = new Set(appPickerData.map(a=>a.pkg));
+    const kept = [...currentWhitelist()].filter(p=>!listed.has(p));
+    state.app_whitelist = [...kept, ...picked].join('\n');
+    onStateChange();
+    scrim.hidden = true;
+    NFBridge.toast('白名单已更新 · ' + (kept.length + picked.length) + ' 个包名');
+  });
+}
+
+function openDialog(){
+  const dirty = changedKeys();
+  document.getElementById('dlgDesc').textContent = `以下 ${dirty.length} 项改动将写入 SharedPreferences("perf") 并发布快照。`;
+  document.getElementById('dlgPayload').textContent =
+    (dirty.length ? dirty.sort().map(k=>`${k}=${keyType(k)}:${state[k]}`).join('\n') : snapshotText())
+    + '\n\n' + shellCommand();
+  document.getElementById('scrim').hidden = false;
+}
+
+function init(){
+  load();
+  mountIcons();
+  resolveTheme();
+  renderModules();
+  bindInputs();
+  syncInputs();
+  restartSim();
+  startGpuPolling();
+  bindAppPicker();
+
+  // 导航
+  document.getElementById('navbar').addEventListener('click',e=>{
+    const b = e.target.closest('[data-tab]'); if(b) switchTab(b.dataset.tab);
+  });
+  switchTab(ui.tab || 'status');
+  document.getElementById('scroll').addEventListener('scroll',e=>{
+    document.getElementById('topbar').classList.toggle('scrolled', e.target.scrollTop > 12);
+  },{passive:true});
+
+  // 主题 / 种子
+  document.getElementById('themeBtn').addEventListener('click',()=>{
+    const dark = document.documentElement.dataset.theme === 'dark';
+    ui.mode = dark ? 'light' : 'dark';
+    setKey('app_theme', dark ? 1 : 2);
+    resolveTheme(); syncInputs(); renderHUD();
+  });
+  document.getElementById('seedBtn').addEventListener('click',()=>{
+    const list = Object.keys(SEEDS);
+    ui.seed = list[(list.indexOf(ui.seed)+1)%list.length];
+    persist(); applyPalette(); syncInputs();
+    toast('动态取色：'+ui.seed);
+  });
+  document.getElementById('themeSeg').addEventListener('click',e=>{
+    const b = e.target.closest('[data-mode]'); if(!b) return;
+    ui.mode = b.dataset.mode;
+    setKey('app_theme', ({auto:0,light:1,dark:2})[ui.mode]);
+    resolveTheme(); syncInputs(); renderHUD();
+  });
+  document.getElementById('seedChips').addEventListener('click',e=>{
+    const b = e.target.closest('[data-seed]'); if(!b) return;
+    ui.seed = b.dataset.seed; persist(); applyPalette(); syncInputs();
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
+    if(ui.mode === 'auto'){ resolveTheme(); renderHUD(); }
+  });
+
+  // 色板
+  document.getElementById('swatches').addEventListener('click',e=>{
+    const b = e.target.closest('.swatch'); if(!b) return;
+    if(state.auto_contrast){ toast('自动反色开启时不能手动选色'); return; }
+    setKey('text_color', +b.dataset.value);
+    toast('字体颜色：'+TEXT_COLOR_NAMES[+b.dataset.value]);
+  });
+
+  // FPS 预设
+  const PRESETS = {
+    all:      [1,1,1,1,1,1],
+    qualcomm: [1,0,1,0,0,0],
+    mediatek: [0,1,1,1,1,0],
+  };
+  document.getElementById('presetSeg').addEventListener('click',e=>{
+    const b = e.target.closest('[data-preset]'); if(!b) return;
+    const keys = ['fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats','fps_src_fpsgo','fps_src_ged','fps_src_vsync'];
+    const vals = PRESETS[b.dataset.preset];
+    keys.forEach((k,i)=>state[k] = !!vals[i]);
+    document.querySelectorAll('#presetSeg .seg').forEach(x=>x.classList.toggle('active',x===b));
+    onStateChange();
+    toast('已应用 '+b.textContent.trim()+' 预设');
+  });
+
+  // 舞台：方向 / 播放 / 场景条件
+  document.getElementById('orientSeg').addEventListener('click',e=>{
+    const b = e.target.closest('[data-orient]'); if(!b) return;
+    ui.orient = b.dataset.orient; persist();
+    document.querySelectorAll('#orientSeg .seg').forEach(x=>x.classList.toggle('active',x===b));
+    document.getElementById('device').classList.toggle('landscape', ui.orient==='landscape');
+    renderHUD();
+  });
+  document.getElementById('device').classList.toggle('landscape', ui.orient==='landscape');
+  document.querySelectorAll('#orientSeg .seg').forEach(x=>x.classList.toggle('active',x.dataset.orient===ui.orient));
+
+  document.getElementById('playBtn').addEventListener('click',e=>{
+    ui.playing = !ui.playing; persist(); restartSim();
+    e.currentTarget.innerHTML = svg(ui.playing?'pause':'play');
+  });
+  [['condCharge','charge'],['condScreen','screen'],['condApp','app']].forEach(([id,k])=>{
+    const el = document.getElementById(id);
+    el.classList.toggle('on', ui.cond[k]);
+    el.addEventListener('click',()=>{
+      ui.cond[k] = !ui.cond[k]; persist();
+      el.classList.toggle('on', ui.cond[k]);
+      renderHUD();
+    });
+  });
+
+  // 动作按钮
+  document.addEventListener('click',e=>{
+    const b = e.target.closest('[data-action]'); if(!b) return;
+    const a = b.dataset.action;
+    if(a === 'reset'){
+      state = {...DEFAULTS}; onStateChange(); renderModules(); restartSim();
+      toast('已恢复默认设置');
+    }
+    if(a === 'resetOffset'){
+      state.offset_x = 0; state.offset_y = 0; onStateChange(); toast('位置已复位');
+    }
+    if(a === 'restart') toast('已发送重启系统界面指令（演示）');
+  });
+
+  // 应用 / 复制 / dialog
+  document.getElementById('applyBtn').addEventListener('click', openDialog);
+  document.getElementById('dlgCancel').addEventListener('click',()=>document.getElementById('scrim').hidden = true);
+  document.getElementById('scrim').addEventListener('click',e=>{
+    if(e.target.id === 'scrim') document.getElementById('scrim').hidden = true;
+  });
+  document.getElementById('dlgApply').addEventListener('click',()=>{
+    NFBridge.publish(snapshotLines());
+    baseline = {...state}; persist(); syncInputs();
+    document.getElementById('scrim').hidden = true;
+    toast('设置已发布 · SystemUI 约 1 秒后生效');
+  });
+  document.getElementById('copyBtn').addEventListener('click',async()=>{
+    try{ await navigator.clipboard.writeText(shellCommand()); toast('已复制 settings 命令'); }
+    catch(err){
+      const ta = document.createElement('textarea');
+      ta.value = shellCommand(); document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove(); toast('已复制 settings 命令');
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
+</html>

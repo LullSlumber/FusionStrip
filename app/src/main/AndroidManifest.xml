@@ -49,14 +49,25 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NexusFloat">
 
+        <!--
+            WebUI 主界面：LAUNCHER 从原 Compose MainActivity 换到这里。
+            WebView 用 NF 桥接直接写本地 perf 表，三条读取通道天然一致。
+            原界面保留为内部页（exported=false），随时可回退，也避免一次性删掉
+            大量 Compose 代码带来的编译与资源风险。
+        -->
         <activity
-            android:name=".ui.MainActivity"
-            android:exported="true">
+            android:name=".webui.WebUiActivity"
+            android:exported="true"
+            android:theme="@style/Theme.NexusFloat">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="false" />
 
         <!--
             充电与使用统计的采样服务。
