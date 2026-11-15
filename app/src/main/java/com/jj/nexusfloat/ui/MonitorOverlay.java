@@ -370,6 +370,9 @@ public final class MonitorOverlay {
         // 强调线：开关与颜色都只影响重绘，不改布局
         monitorView.setStripLineColorIndex(NexusBridge.getStripLineColorIndex());
         monitorView.setStripLineEnabled(NexusBridge.isStripLineEnabled());
+        // HUD 尺寸（可能重排）与不透明度（只重绘）
+        changed |= monitorView.setHudSize(NexusBridge.getHudSize());
+        monitorView.setHudOpacity(NexusBridge.getHudOpacity());
         // 采集周期：collector 每轮重读，不影响布局
         monitorView.setIntervalMs(NexusBridge.getUpdateIntervalMs());
         boolean fontChanged = monitorView.setFontSizeSp(NexusBridge.getFontSizeSp());

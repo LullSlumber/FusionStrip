@@ -195,6 +195,24 @@ class FusionStripView(context: Context) : FrameLayout(context) {
         return false
     }
 
+    /** 「HUD 尺寸」：写入 DroidDeck 配置键 hudSize 并即时重排（STRIP/面板等）。 */
+    fun setHudSize(token: String): Boolean {
+        val values = currentConfig()
+        if (values["hudSize"] == token) return false
+        values["hudSize"] = token
+        apply(values)
+        return true
+    }
+
+    /** 「HUD 不透明度」：映射 DroidDeck 背景 alpha，只重绘不重排。 */
+    fun setHudOpacity(pct: Int) {
+        val values = currentConfig()
+        val v = pct.coerceIn(0, 100).toString()
+        if (values["hudOpacity"] == v) return
+        values["hudOpacity"] = v
+        apply(values)
+    }
+
     /** 强调线：DroidDeck 渲染本体无线元件，由包装层 onDraw 画在底边（贴游戏一侧）。 */
     private var stripLineEnabled = true
     private var stripLineColor = 0xFFFFB74D.toInt()

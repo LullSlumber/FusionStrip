@@ -319,6 +319,16 @@ public final class NexusBridge {
         return (idx >= 0 && idx < Constants.Ui.STRIP_LINE_COLORS.length) ? idx : 0;
     }
 
+    /** 「HUD 尺寸」：DroidDeckHudSize token；默认 strip。 */
+    public static String getHudSize() {
+        return readString(Constants.Modules.KEY_HUD_SIZE, "strip");
+    }
+
+    /** 「HUD 不透明度」：0-100；默认 88。 */
+    public static int getHudOpacity() {
+        return readInt(Constants.Modules.KEY_HUD_OPACITY, 88);
+    }
+
     /**
      * CPU 柱状图开关；默认开。
      *

@@ -60,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import com.droiddeck.launcher.hud.DroidDeckHudSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jj.nexusfloat.App
@@ -136,6 +137,9 @@ class MainActivity : ComponentActivity() {
     private var appTheme by mutableStateOf(Constants.Modules.APP_THEME_SYSTEM)
     /** App 界面强调色种子（UiSeeds），只影响设置界面配色 */
     private var uiSeed by mutableStateOf("blue")
+    /** 「HUD 尺寸 / 不透明度」：DroidDeck 渲染层配置（走 SettingsChannel 同步） */
+    private var hudSize by mutableStateOf("strip")
+    private var hudOpacity by mutableStateOf(88)
     /** 软件界面壁纸文件名（v1.8.5）：存在 filesDir 里的图片，空串表示不用 */
     private var uiWallpaperName by mutableStateOf("")
     /** 壁纸解码后的位图；Compose 内部用 remember 拿着，这个是读取时用的 */
@@ -249,6 +253,8 @@ class MainActivity : ComponentActivity() {
         fpsDebug = readSwitch(Constants.Modules.KEY_FPS_DEBUG, default = false)
         appTheme = readInt(Constants.Modules.KEY_APP_THEME, Constants.Modules.APP_THEME_SYSTEM)
         uiSeed = readString(Constants.Modules.KEY_UI_SEED, "blue")
+        hudSize = readString(Constants.Modules.KEY_HUD_SIZE, "strip")
+        hudOpacity = readInt(Constants.Modules.KEY_HUD_OPACITY, 88)
         loadModuleOrder()
         uiWallpaperName = readString(Constants.Modules.KEY_UI_WALLPAPER, "")
         spaceBefore = Constants.Modules.parseSpaceBefore(
@@ -391,6 +397,18 @@ class MainActivity : ComponentActivity() {
                             onStripLineColorChange = { index ->
                                 stripLineColorIndex = index
                                 saveInt(Constants.Modules.KEY_STRIP_LINE_COLOR, index)
+                            },
+                            hudSize = hudSize,
+                            onHudSizeChange = { token ->
+                                hudSize = token
+                                saveString(Constants.Modules.KEY_HUD_SIZE, token)
+                                publishSettings()
+                            },
+                            hudOpacity = hudOpacity,
+                            onHudOpacityChange = { pct ->
+                                hudOpacity = pct
+                                saveInt(Constants.Modules.KEY_HUD_OPACITY, pct)
+                                publishSettings()
                             },
                             dualCellEnabled = dualCellEnabled,
                             onDualCellChange = { checked ->
@@ -1138,6 +1156,10 @@ fun MainScreen(
     onStripLineEnabledChange: (Boolean) -> Unit,
     stripLineColorIndex: Int,
     onStripLineColorChange: (Int) -> Unit,
+    hudSize: String,
+    onHudSizeChange: (String) -> Unit,
+    hudOpacity: Int,
+    onHudOpacityChange: (Int) -> Unit,
     dualCellEnabled: Boolean,
     onDualCellChange: (Boolean) -> Unit,
     appFilterEnabled: Boolean,
@@ -1244,6 +1266,12 @@ fun MainScreen(
 
                 // 统计页自成一屏：自己拉数据、自己定时刷新，只收设置项和两个动作
                 MainTab.MODULES -> {
+                    HudRenderCard(
+                        hudSize = hudSize,
+                        onHudSizeChange = onHudSizeChange,
+                        hudOpacity = hudOpacity,
+                        onHudOpacityChange = onHudOpacityChange
+                    )
                     ModulesCard(
                         moduleFlags = moduleFlags,
                         onModuleChange = onModuleChange,
@@ -1812,6 +1840,95 @@ fun DisplayCard(
                     "间隔越小越不容易断，也越费电"
         )
 
+    }
+}
+
+@Composable
+fun HudRenderCard(
+    hudSize: String,
+    onHudSizeChange: (String) -> Unit,
+    hudOpacity: Int,
+    onHudOpacityChange: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "HUD 渲染",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MdThemeOnSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "渲染本体为 DroidDeck HUD；STRIP 横条为最低开销形态",
+                fontSize = 11.sp,
+                color = MdThemeOnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "尺寸",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MdThemeOnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                DroidDeckHudSize.entries.forEach { size ->
+                    val selected = size.token == hudSize
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onHudSizeChange(size.token) }
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) { Text(size.label, fontSize = 12.sp) }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = "不透明度",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MdThemeOnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("−", fontSize = 20.sp, modifier = Modifier.clickable {
+                    onHudOpacityChange((hudOpacity - 5).coerceIn(0, 100))
+                })
+                Slider(
+                    value = hudOpacity.toFloat(),
+                    onValueChange = { onHudOpacityChange((it / 5f).toInt() * 5) },
+                    valueRange = 0f..100f,
+                    steps = 19,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 10.dp)
+                )
+                Text("＋", fontSize = 20.sp, modifier = Modifier.clickable {
+                    onHudOpacityChange((hudOpacity + 5).coerceIn(0, 100))
+                })
+                Text(
+                    "$hudOpacity%",
+                    fontSize = 12.sp,
+                    modifier = Modifier.width(44.dp),
+                    textAlign = TextAlign.End
+                )
+            }
+        }
     }
 }
 
