@@ -305,6 +305,21 @@ public final class NexusBridge {
     }
 
     /**
+     * 「强调线」开关；默认开。改动只影响重绘，不触发重测。
+     */
+    public static boolean isStripLineEnabled() {
+        return readBool(Constants.Modules.KEY_STRIP_LINE, true);
+    }
+
+    /**
+     * 「强调线颜色」：Ui.STRIP_LINE_COLORS 下标；越界回琥珀。
+     */
+    public static int getStripLineColorIndex() {
+        int idx = readInt(Constants.Modules.KEY_STRIP_LINE_COLOR, 0);
+        return (idx >= 0 && idx < Constants.Ui.STRIP_LINE_COLORS.length) ? idx : 0;
+    }
+
+    /**
      * CPU 柱状图开关；默认开。
      *
      * 默认开是为了跟旧版本一致——柱条一直画着，只不过现在能关掉了。

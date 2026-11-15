@@ -425,6 +425,15 @@ public final class Constants {
         public static final String LABEL_TEXT_COLOR = "字体颜色";
 
         /**
+         * 「强调线」：横条贴游戏一侧的装饰细线，颜色从 Ui.STRIP_LINE_COLORS 选。
+         * 开关默认开，颜色默认琥珀。
+         */
+        public static final String KEY_STRIP_LINE = "strip_line";
+        public static final String LABEL_STRIP_LINE = "强调线";
+        public static final String KEY_STRIP_LINE_COLOR = "strip_line_color";
+        public static final String LABEL_STRIP_LINE_COLOR = "强调线颜色";
+
+        /**
          * 「刷新时间」：采集和显示的周期，单位毫秒。
          *
          * 存毫秒不存秒：秒是浮点，跨进程传和比较都要处理精度；
@@ -1843,6 +1852,25 @@ public final class Constants {
         /** 色板各项的名称，下标跟 TEXT_COLORS 对应 */
         public static final String[] TEXT_COLOR_NAMES = {
                 "白", "黑", "蓝", "绿", "黄", "红", "紫", "青",
+        };
+
+        /**
+         * 「强调线」色板：横条贴游戏一侧的装饰细线用色，下标跟
+         * KEY_STRIP_LINE_COLOR 存的值对应。默认琥珀（第一项）。
+         */
+        public static final int[] STRIP_LINE_COLORS = {
+                0xFFFFB74D, // 琥珀
+                0xFFFFFFFF, // 白
+                0xFFFF5252, // 红
+                0xFFFF9800, // 橙
+                0xFFFFEB3B, // 黄
+                0xFF66BB6A, // 绿
+                0xFF4FC3F7, // 蓝
+                0xFFAB47BC, // 紫
+        };
+        /** 强调线色板各项名称，下标跟 STRIP_LINE_COLORS 对应 */
+        public static final String[] STRIP_LINE_COLOR_NAMES = {
+                "琥珀", "白", "红", "橙", "黄", "绿", "蓝", "紫",
         };
         /**
          * 状态栏图标色的 luma 上限，低于它判定「系统在用深色图标」，

@@ -367,6 +367,9 @@ public final class MonitorOverlay {
         // 先设颜色再设反色：后者会按需覆盖前者，顺序反了就用了上一次的颜色
         monitorView.setTextColorIndex(NexusBridge.getTextColorIndex());
         monitorView.setAutoContrastEnabled(NexusBridge.isAutoContrastEnabled());
+        // 强调线：开关与颜色都只影响重绘，不改布局
+        monitorView.setStripLineColorIndex(NexusBridge.getStripLineColorIndex());
+        monitorView.setStripLineEnabled(NexusBridge.isStripLineEnabled());
         // 采集周期：collector 每轮重读，不影响布局
         monitorView.setIntervalMs(NexusBridge.getUpdateIntervalMs());
         boolean fontChanged = monitorView.setFontSizeSp(NexusBridge.getFontSizeSp());

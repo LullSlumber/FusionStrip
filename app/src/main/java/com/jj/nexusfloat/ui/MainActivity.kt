@@ -121,6 +121,9 @@ class MainActivity : ComponentActivity() {
     private var autoContrastEnabled by mutableStateOf(false)
     /** 「字体颜色」在 Constants.Ui.TEXT_COLORS 里的下标，0 是白色 */
     private var textColorIndex by mutableStateOf(0)
+    /** 「强调线」开关与颜色下标（Ui.STRIP_LINE_COLORS） */
+    private var stripLineEnabled by mutableStateOf(true)
+    private var stripLineColorIndex by mutableStateOf(0)
     /** CPU / GPU 柱状图开关，默认开（跟旧版本观感一致） */
     private var cpuBarEnabled by mutableStateOf(true)
     private var gpuBarEnabled by mutableStateOf(true)
@@ -243,6 +246,8 @@ class MainActivity : ComponentActivity() {
         backgroundEnabled = readSwitch(Constants.Modules.KEY_BACKGROUND, default = false)
         autoContrastEnabled = readSwitch(Constants.Modules.KEY_AUTO_CONTRAST, default = false)
         textColorIndex = readInt(Constants.Modules.KEY_TEXT_COLOR, 0)
+        stripLineEnabled = readSwitch(Constants.Modules.KEY_STRIP_LINE, default = true)
+        stripLineColorIndex = readInt(Constants.Modules.KEY_STRIP_LINE_COLOR, 0)
             .coerceIn(0, Constants.Ui.TEXT_COLORS.size - 1)
         cpuBarEnabled = readSwitch(Constants.Modules.KEY_CPU_BAR, default = true)
         gpuBarEnabled = readSwitch(Constants.Modules.KEY_GPU_BAR, default = true)
@@ -400,6 +405,16 @@ class MainActivity : ComponentActivity() {
                             onTextColorChange = { index ->
                                 textColorIndex = index
                                 saveInt(Constants.Modules.KEY_TEXT_COLOR, index)
+                            },
+                            stripLineEnabled = stripLineEnabled,
+                            onStripLineEnabledChange = { checked ->
+                                stripLineEnabled = checked
+                                saveSwitch(Constants.Modules.KEY_STRIP_LINE, checked)
+                            },
+                            stripLineColorIndex = stripLineColorIndex,
+                            onStripLineColorChange = { index ->
+                                stripLineColorIndex = index
+                                saveInt(Constants.Modules.KEY_STRIP_LINE_COLOR, index)
                             },
                             dualCellEnabled = dualCellEnabled,
                             onDualCellChange = { checked ->
@@ -1241,6 +1256,10 @@ fun MainScreen(
     onAutoContrastChange: (Boolean) -> Unit,
     textColorIndex: Int,
     onTextColorChange: (Int) -> Unit,
+    stripLineEnabled: Boolean,
+    onStripLineEnabledChange: (Boolean) -> Unit,
+    stripLineColorIndex: Int,
+    onStripLineColorChange: (Int) -> Unit,
     dualCellEnabled: Boolean,
     onDualCellChange: (Boolean) -> Unit,
     appFilterEnabled: Boolean,
@@ -1406,6 +1425,10 @@ fun MainScreen(
                         onAutoContrastChange = onAutoContrastChange,
                         textColorIndex = textColorIndex,
                         onTextColorChange = onTextColorChange,
+                        stripLineEnabled = stripLineEnabled,
+                        onStripLineEnabledChange = onStripLineEnabledChange,
+                        stripLineColorIndex = stripLineColorIndex,
+                        onStripLineColorChange = onStripLineColorChange,
                         dualCellEnabled = dualCellEnabled,
                         onDualCellChange = onDualCellChange,
                         fontSizeSp = fontSizeSp,
@@ -2304,6 +2327,10 @@ fun AppearanceCard(
     onAutoContrastChange: (Boolean) -> Unit,
     textColorIndex: Int,
     onTextColorChange: (Int) -> Unit,
+    stripLineEnabled: Boolean,
+    onStripLineEnabledChange: (Boolean) -> Unit,
+    stripLineColorIndex: Int,
+    onStripLineColorChange: (Int) -> Unit,
     dualCellEnabled: Boolean,
     onDualCellChange: (Boolean) -> Unit,
     fontSizeSp: Float,
@@ -2363,6 +2390,26 @@ fun AppearanceCard(
             checked = dualCellEnabled,
             onCheckedChange = onDualCellChange,
             description = "双电芯机型功率偏小一半时开启"
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 强调线：横条贴游戏一侧的装饰细线，颜色从 STRIP_LINE_COLORS 选
+        ToggleRow(
+            label = Constants.Modules.LABEL_STRIP_LINE,
+            checked = stripLineEnabled,
+            onCheckedChange = onStripLineEnabledChange
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ColorPickerRow(
+            label = Constants.Modules.LABEL_STRIP_LINE_COLOR,
+            selectedIndex = stripLineColorIndex,
+            enabled = stripLineEnabled,
+            onSelect = onStripLineColorChange,
+            colors = Constants.Ui.STRIP_LINE_COLORS,
+            names = Constants.Ui.STRIP_LINE_COLOR_NAMES
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -2452,7 +2499,9 @@ private fun ColorPickerRow(
     label: String,
     selectedIndex: Int,
     enabled: Boolean,
-    onSelect: (Int) -> Unit
+    onSelect: (Int) -> Unit,
+    colors: IntArray = Constants.Ui.TEXT_COLORS,
+    names: Array<String> = Constants.Ui.TEXT_COLOR_NAMES
 ) {
     val shape = RoundedCornerShape(14.dp)
     Column(
@@ -2472,7 +2521,7 @@ private fun ColorPickerRow(
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = Constants.Ui.TEXT_COLOR_NAMES.getOrElse(selectedIndex) { "" },
+                text = names.getOrElse(selectedIndex) { "" },
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (enabled) MdThemePrimary else MdThemeOnSurfaceVariant.copy(alpha = 0.5f)
@@ -2493,7 +2542,7 @@ private fun ColorPickerRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Constants.Ui.TEXT_COLORS.forEachIndexed { index, argb ->
+            colors.forEachIndexed { index, argb ->
                 val selected = index == selectedIndex
                 Box(
                     modifier = Modifier

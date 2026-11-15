@@ -2,6 +2,8 @@ package com.jj.nexusfloat.ui.view;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.text.format.DateFormat;
@@ -113,6 +115,10 @@ public class MonitorView extends LinearLayout {
     private boolean autoContrastEnabled;
     /** 用户选的字体颜色（ARGB）。「自动反色」生效时会临时盖掉它 */
     private int textColor = Constants.Ui.COLOR_TEXT;
+    /** 「强调线」开关与颜色：横条贴游戏一侧的装饰细线，onDraw 画在底边 */
+    private boolean stripLineEnabled = true;
+    private int stripLineColor = Constants.Ui.STRIP_LINE_COLORS[0];
+    private final Paint stripLinePaint = new Paint();
     /**
      * 系统下发的状态栏图标 tint；Constants.Config#UNPUBLISHED 表示还没收到。
      *
@@ -309,6 +315,11 @@ public class MonitorView extends LinearLayout {
         applyTintColor();
 
         collector = new PerformanceCollector(context, this::updateData);
+
+        // 强调线初值：直读一层设置快照，注入后第一轮 syncModuleFlags 会再对齐一次
+        stripLinePaint.setColor(stripLineColor);
+        stripLineEnabled = NexusBridge.isStripLineEnabled();
+        setStripLineColorIndex(NexusBridge.getStripLineColorIndex());
     }
 
     /** 顶层模块：分隔条并进本组，整组藏起来时分隔条一起没，模块间距不留空 */
@@ -1251,6 +1262,45 @@ public class MonitorView extends LinearLayout {
         textColor = color;
         applyTintColor();
         // 只换颜色不改尺寸，无需 requestLayout
+        return false;
+    }
+
+    /**
+     * 画「强调线」：横条贴游戏一侧（贴顶时是底边，贴底时是顶边）的装饰细线。
+     * 画在内容之上、背景之后，线宽固定 2dp，不参与布局测量。
+     */
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (!stripLineEnabled || getWidth() <= 0) {
+            return;
+        }
+        int thickness = Math.max(2, Math.round(getResources().getDisplayMetrics().density * 1.5f));
+        // 监视条固定在状态栏位置（贴顶），强调线画在底边（贴游戏的一侧）
+        float y = getHeight() - thickness;
+        canvas.drawRect(0, y, getWidth(), y + thickness, stripLinePaint);
+    }
+
+    /** 「强调线」开关。只影响重绘，不改布局。 */
+    public boolean setStripLineEnabled(boolean enabled) {
+        if (stripLineEnabled == enabled) {
+            return false;
+        }
+        stripLineEnabled = enabled;
+        invalidate();
+        return false;
+    }
+
+    /** 「强调线颜色」：Ui.STRIP_LINE_COLORS 下标。只影响重绘。 */
+    public boolean setStripLineColorIndex(int index) {
+        int[] palette = Constants.Ui.STRIP_LINE_COLORS;
+        int color = (index >= 0 && index < palette.length) ? palette[index] : palette[0];
+        if (stripLineColor == color) {
+            return false;
+        }
+        stripLineColor = color;
+        stripLinePaint.setColor(color);
+        invalidate();
         return false;
     }
 
