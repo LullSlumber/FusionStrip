@@ -18,6 +18,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -140,6 +142,8 @@ class MainActivity : ComponentActivity() {
     private var fpsDebug by mutableStateOf(false)
     /** App 界面主题：0 跟随系统 / 1 浅色 / 2 深色 */
     private var appTheme by mutableStateOf(Constants.Modules.APP_THEME_SYSTEM)
+    /** App 界面强调色种子（UiSeeds），只影响设置界面配色 */
+    private var uiSeed by mutableStateOf("blue")
     /** 软件界面壁纸文件名（v1.8.5）：存在 filesDir 里的图片，空串表示不用 */
     private var uiWallpaperName by mutableStateOf("")
     /** 壁纸解码后的位图；Compose 内部用 remember 拿着，这个是读取时用的 */
@@ -263,6 +267,7 @@ class MainActivity : ComponentActivity() {
         sfPreferRoot = readSwitch(Constants.Modules.KEY_SF_PREFER_ROOT, default = false)
         fpsDebug = readSwitch(Constants.Modules.KEY_FPS_DEBUG, default = false)
         appTheme = readInt(Constants.Modules.KEY_APP_THEME, Constants.Modules.APP_THEME_SYSTEM)
+        uiSeed = readString(Constants.Modules.KEY_UI_SEED, "blue")
         loadModuleOrder()
         uiWallpaperName = readString(Constants.Modules.KEY_UI_WALLPAPER, "")
         spaceBefore = Constants.Modules.parseSpaceBefore(
@@ -278,7 +283,7 @@ class MainActivity : ComponentActivity() {
                 Constants.Modules.APP_THEME_DARK -> true
                 else -> isSystemInDarkTheme()
             }
-            NexusFloatTheme(darkTheme = dark) {
+            NexusFloatTheme(darkTheme = dark, seedHue = UiSeeds.hueOf(uiSeed)) {
                 // 壁纸选择器：从相册挑一张图当软件界面壁纸（v1.8.5）
                 val wallpaperPicker = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.GetContent()
@@ -463,6 +468,11 @@ class MainActivity : ComponentActivity() {
                             onAppThemeChange = { value ->
                                 appTheme = value
                                 saveInt(Constants.Modules.KEY_APP_THEME, value)
+                            },
+                            uiSeed = uiSeed,
+                            onUiSeedChange = { value ->
+                                uiSeed = value
+                                saveString(Constants.Modules.KEY_UI_SEED, value)
                             },
                             hasWallpaper = uiWallpaperName.isNotEmpty(),
                             onPickWallpaper = { wallpaperPicker.launch("image/*") },
@@ -1263,6 +1273,8 @@ fun MainScreen(
     onRestartSystemUi: () -> Unit,
     appTheme: Int,
     onAppThemeChange: (Int) -> Unit,
+    uiSeed: String,
+    onUiSeedChange: (String) -> Unit,
     hasWallpaper: Boolean,
     onPickWallpaper: () -> Unit,
     onClearWallpaper: () -> Unit,
@@ -1310,6 +1322,8 @@ fun MainScreen(
                     versionName = versionName,
                     appTheme = appTheme,
                     onAppThemeChange = onAppThemeChange,
+                    uiSeed = uiSeed,
+                    onUiSeedChange = onUiSeedChange,
                     hasWallpaper = hasWallpaper,
                     onPickWallpaper = onPickWallpaper,
                     onClearWallpaper = onClearWallpaper
@@ -1488,6 +1502,8 @@ fun HeaderCard(
     versionName: String,
     appTheme: Int,
     onAppThemeChange: (Int) -> Unit,
+    uiSeed: String,
+    onUiSeedChange: (String) -> Unit,
     hasWallpaper: Boolean,
     onPickWallpaper: () -> Unit,
     onClearWallpaper: () -> Unit
@@ -1547,6 +1563,40 @@ fun HeaderCard(
                 selectedIndex = appTheme,
                 onSelect = onAppThemeChange
             )
+
+            // 强调色种子（MD3 tonal 动态色）：只影响设置界面配色，
+            // 监视条颜色在「项目」页单独控制
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "强调色 · Material You",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MdThemeOnSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                UiSeeds.ORDER.forEach { key ->
+                    val hue = UiSeeds.hueOf(key)
+                    val selected = key == uiSeed
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(hslColor(hue, 72, 56))
+                            .border(
+                                width = if (selected) 2.5.dp else 0.dp,
+                                color = if (selected) MdThemeOnSurface else Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .clickable { onUiSeedChange(key) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (selected) {
+                            Text("✓", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
 
             // 软件界面壁纸（v1.8.5）：配合液态玻璃材质，选图当页面背景。
             // 有壁纸时显示清除按钮，没有就只显示选择按钮

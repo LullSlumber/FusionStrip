@@ -183,13 +183,21 @@ private fun scheme(c: NexusColors) = if (c.isDark) {
 /**
  * darkTheme 决定用深色还是浅色。调用方按「浅色 / 深色 / 跟随系统」的设置算好传进来，
  * 跟随系统的话就传 `isSystemInDarkTheme()`。
+ *
+ * seedHue：MD3 tonal 动态色的种子色相（0-359，见 [nexusColorsForSeed]）；
+ * 传 -1（默认）时保持钴蓝手写配色不变，向后兼容。
  */
 @Composable
 fun NexusFloatTheme(
     darkTheme: Boolean = true,
+    seedHue: Int = -1,
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) DarkColors else LightColors
+    val colors = when {
+        seedHue >= 0 -> nexusColorsForSeed(seedHue, darkTheme)
+        darkTheme -> DarkColors
+        else -> LightColors
+    }
     CompositionLocalProvider(LocalNexusColors provides colors) {
         // Material 的组件（Switch、Button、进度圈）是走 MaterialTheme 取色的，
         // 所以两套颜色都得喂给它，不然浅色下 Switch 还是深色那套

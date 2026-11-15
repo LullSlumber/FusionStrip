@@ -678,6 +678,8 @@ public final class Constants {
          */
         public static final String KEY_APP_THEME = "app_theme";
         public static final int APP_THEME_SYSTEM = 0;
+        /** App 界面强调色种子（UiSeeds.ORDER 里的 key，如 "blue"），只影响设置界面配色 */
+        public static final String KEY_UI_SEED = "ui_seed";
         public static final int APP_THEME_LIGHT = 1;
         public static final int APP_THEME_DARK = 2;
         /** 三个选项的按钮文字，下标就是取值 */
