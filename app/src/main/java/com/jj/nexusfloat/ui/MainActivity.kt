@@ -56,7 +56,6 @@ import com.jj.nexusfloat.collector.GpuCollectorWorker
 import com.jj.nexusfloat.constant.Constants
 import com.jj.nexusfloat.hud.FusionStripView
 import com.jj.nexusfloat.service.GpuCollectorLauncher
-import com.jj.nexusfloat.service.GpuCollectorWorker
 import com.jj.nexusfloat.ui.theme.MdThemeOnSurface
 import com.jj.nexusfloat.ui.theme.MdThemeOnSurfaceVariant
 import com.jj.nexusfloat.ui.theme.MdThemePrimary
