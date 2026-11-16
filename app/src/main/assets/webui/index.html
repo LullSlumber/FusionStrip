@@ -148,7 +148,7 @@ svg{display:block}
   border-right:1px solid var(--md-sys-color-outline-variant);
 }
 .topbar{
-  flex:none;height:calc(64px + var(--nf-sat));display:flex;align-items:center;gap:8px;
+  flex:none;height:calc(52px + var(--nf-sat));display:flex;align-items:center;gap:8px;
   padding:var(--nf-sat) 16px 0;
   background:color-mix(in srgb,var(--md-sys-color-surface) 72%,transparent);
   -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
@@ -488,7 +488,7 @@ svg{display:block}
 /* ── 底部导航 / FAB ── */
 .navbar{
   flex:none;display:grid;grid-template-columns:repeat(4,1fr);
-  height:calc(78px + var(--nf-sab));padding:8px 8px calc(10px + var(--nf-sab));
+  height:calc(64px + var(--nf-sab));padding:6px 8px calc(8px + var(--nf-sab));
   background:color-mix(in srgb,var(--md-sys-color-surface-container) 80%,transparent);
   -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
   border-top:1px solid var(--md-sys-color-outline-variant);
@@ -792,7 +792,7 @@ svg{display:block}
         <h1>FusionStrip</h1>
         <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
         <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.16</span>
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.17</span>
           <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
           <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
         </div>
@@ -902,14 +902,6 @@ svg{display:block}
           </div>
         </div>
 
-        <div class="group-title">空格自定义</div>
-        <div class="card">
-          <label class="text-field">
-            <span>项目名 + 空格数</span>
-            <textarea data-key="space_before" data-type="s" rows="2" spellcheck="false" placeholder="ZRAM2,CPU1"></textarea>
-          </label>
-          <p class="card-note">默认各项紧贴。填 <code>ZRAM2,CPU1</code> 表示在 ZRAM 前留 2 个空格、CPU 前留 1 个；多个用逗号隔开，空格数 1–9。</p>
-        </div>
       </section>
 
       <!-- ───────── 外观 ───────── -->
@@ -1498,7 +1490,7 @@ function onStateChange(){
 }
 
 /* ───────────────────────── 6. 监视项目列表 ───────────────────────── */
-function orderArr(){ return state.module_order.split(',').map(Number).filter(n=>MODULES.some(m=>m.idx===n)); }
+function orderArr(){ const order = state.module_order || DEFAULTS.module_order; return order.split(',').map(Number).filter(n=>MODULES.some(m=>m.idx===n)); }
 function parseSpaces(str){
   const map = {};
   String(str||'').split(/[,，]/).forEach(part=>{
@@ -1509,63 +1501,35 @@ function parseSpaces(str){
   });
   return map;
 }
-function serializeSpaces(map){
-  return MODULES.filter(m=>map[m.key]>0).map(m=>m.label+map[m.key]).join(',');
-}
+
 function renderModules(){
   const open = new Set([...document.querySelectorAll('.mod-item.open')].map(el=>el.dataset.mod));
   const box = document.getElementById('moduleList');
-  const spaces = parseSpaces(state.space_before);
   const arr = orderArr();
-  box.innerHTML = arr.map((idx,i)=>{
+  box.innerHTML = arr.map((idx)=>{
     const m = MODULES.find(x=>x.idx===idx);
     const on = !!state[m.key];
-    const name = m.nameKey ? (state[m.nameKey]||'') : '';
+    const hasSub = m.sub && m.sub.length;
     return `<div class="mod-item ${on?'on':''} ${open.has(m.key)?'open':''}" data-mod="${m.key}">
       <div class="mod-main">
-        <div class="mod-drag">
-          <button class="mini-btn" data-move="${i}" data-dir="-1" ${i===0?'disabled':''} title="上移">${svg('arrowUp')}</button>
-          <button class="mini-btn" data-move="${i}" data-dir="1" ${i===arr.length-1?'disabled':''} title="下移">${svg('arrowDown')}</button>
-        </div>
         <span class="mod-icon">${svg(m.icon)}</span>
-        <div class="mod-info" data-expand="${m.key}">
+        <div class="mod-info" ${hasSub?`data-expand="${m.key}"`:''}>
           <b>${m.label}</b><small>${m.key}</small>
         </div>
         <div class="mod-tools">
-          <span class="key-hint">${name ? esc(name) : '图标'}</span>
-          <button class="mod-expand" data-expand="${m.key}" title="展开">${svg('chevron')}</button>
+          ${hasSub?`<button class="mod-expand" data-expand="${m.key}" title="展开">${svg('chevron')}</button>`:''}
           <label class="switch"><input type="checkbox" data-key="${m.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label>
         </div>
       </div>
-      <div class="mod-detail"><div class="mod-detail-inner"><div class="mod-detail-pad">
-        ${m.nameKey ? `<div class="mod-name-field"><span>显示名称</span><input type="text" maxlength="6" data-key="${m.nameKey}" data-type="s" placeholder="留空 = 显示图标"></div>`:''}
-        ${(m.sub||[]).map(s=>`<div class="mod-sub"><b>${s.label}</b><label class="switch"><input type="checkbox" data-key="${s.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>`).join('')}
-        <div class="mod-name-field"><span>前置空格</span>
-          <select data-space="${m.key}" style="flex:1;height:34px;padding:0 10px;border-radius:8px;border:1px solid var(--md-sys-color-outline);background:var(--md-sys-color-surface-container);font-size:12px">
-            ${Array.from({length:10},(_,n)=>`<option value="${n}" ${(spaces[m.key]||0)===n?'selected':''}>${n} 个空格</option>`).join('')}
-          </select>
-        </div>
-      </div></div></div>
+      ${hasSub?`<div class="mod-detail"><div class="mod-detail-inner"><div class="mod-detail-pad">
+        ${m.sub.map(s=>`<div class="mod-sub"><b>${s.label}</b><label class="switch"><input type="checkbox" data-key="${s.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>`).join('')}
+      </div></div></div>`:''}
     </div>`;
   }).join('');
-  // 展开状态：重新绑定事件（整块重绘）
+  // 展开状态：重新绑定事件（整块重绘）；排序/名称/前置空格已移除（lull.17）
   box.querySelectorAll('[data-expand]').forEach(el=>el.addEventListener('click',()=>{
     const item = el.closest('.mod-item');
     item.classList.toggle('open');
-  }));
-  box.querySelectorAll('[data-move]').forEach(btn=>btn.addEventListener('click',e=>{
-    e.stopPropagation();
-    const i = +btn.dataset.move, dir = +btn.dataset.dir, a = orderArr();
-    const j = i + dir;
-    if(j<0 || j>=a.length) return;
-    [a[i],a[j]] = [a[j],a[i]];
-    setKey('module_order', a.join(','));
-    renderModules(); syncInputs();
-  }));
-  box.querySelectorAll('[data-space]').forEach(sel=>sel.addEventListener('change',()=>{
-    const map = parseSpaces(state.space_before);
-    map[sel.dataset.space] = +sel.value;
-    setKey('space_before', serializeSpaces(map));
   }));
   bindInputs(box);
   syncInputs();
@@ -1698,7 +1662,6 @@ function bindInputs(root){
       else v = el.value;
       setKey(k,v);
       if(k === 'update_interval_ms') restartSim();
-      if(k === 'space_before') syncSpaceSelects();
     };
     el.addEventListener(el.tagName === 'TEXTAREA' || el.type === 'text' ? 'input' : 'change', handler);
     if(el.type === 'range') el.addEventListener('input', ()=>{
@@ -1708,10 +1671,6 @@ function bindInputs(root){
       if(tip) tip.textContent = fmtSlider(k, el.value);
     });
   });
-}
-function syncSpaceSelects(){
-  const map = parseSpaces(state.space_before);
-  document.querySelectorAll('[data-space]').forEach(s=>s.value = map[s.dataset.space]||0);
 }
 
 function toast(msg){
@@ -1859,18 +1818,30 @@ function openDialog(){
   document.getElementById('scrim').hidden = false;
 }
 
-/* lull.16：双电芯 / FPS 来源 / 统计设置已从界面移除。
-   启动时把设备 perf 表里对应键删掉（commit null），让 NexusBridge 回退内置默认
-   （FPS=高通组合：面板→TimeStats；统计开启·15s·常驻通知·不限亮屏）。幂等。 */
+/* lull.16/17：以下选项已从界面移除。启动时把设备 perf 表里对应键删掉
+   （commit null），让 NexusBridge 回退内置默认。删完后 state/baseline/
+   deviceState 回填 DEFAULTS 同值——预览渲染（排序/名称）仍需要这些键，
+   且与设备语义一致，后续 diff 也不会再误提交。幂等。 */
 const REMOVED_KEYS = ['dual_cell','fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats',
   'fps_src_fpsgo','fps_src_ged','fps_src_vsync','stats_enabled','stats_interval_sec',
-  'stats_notification','stats_screen_on_only'];
+  'stats_notification','stats_screen_on_only',
+  'module_order','space_before',
+  'name_mod_cpu','name_mod_gpu','name_mod_ram','name_mod_zram','name_mod_temp',
+  'name_mod_power','name_mod_current','name_mod_fps','name_mod_cpu_temp','name_mod_net'];
 function purgeRemovedKeys(){
   if(!hasNative()) return;
   const diff = {};
   REMOVED_KEYS.forEach(k=>diff[k]=null);
   try{ window.NF.commit(JSON.stringify(diff)); }catch(e){}
-  REMOVED_KEYS.forEach(k=>{ delete state[k]; delete baseline[k]; if(deviceState) delete deviceState[k]; });
+  REMOVED_KEYS.forEach(k=>{
+    if(DEFAULTS[k] !== undefined){
+      state[k] = DEFAULTS[k]; baseline[k] = DEFAULTS[k];
+      if(deviceState) deviceState[k] = DEFAULTS[k];
+    } else {
+      delete state[k]; delete baseline[k];
+      if(deviceState) delete deviceState[k];
+    }
+  });
 }
 
 /* lull.16：窄屏时把预览舞台从 shell 尾部移到顶栏之后（顶栏→预览→内容），
