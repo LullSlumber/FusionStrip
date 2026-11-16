@@ -779,7 +779,7 @@ svg{display:block}
       <div class="brand-mark" data-icon="activity"></div>
       <div class="topbar-titles">
         <b>FusionStrip</b>
-        <span id="topbarSub">控制台 · 1.9.4-lull.19</span>
+        <span id="topbarSub">控制台 · 1.9.4-lull.20</span>
       </div>
       <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
       <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
@@ -1012,10 +1012,6 @@ svg{display:block}
 
     </div><!-- /scroll -->
 
-    <div class="fab-holder" id="fabHolder" hidden>
-      <button class="fab" id="applyBtn"><span data-icon="check"></span><span id="fabLabel">应用 0 项更改</span></button>
-    </div>
-
     <nav class="navbar" id="navbar">
       <button class="nav-item active" data-tab="status"><span class="nav-ind"><span data-icon="home"></span></span><small>状态</small></button>
       <button class="nav-item" data-tab="modules"><span class="nav-ind"><span data-icon="list"></span></span><small>项目</small></button>
@@ -1025,21 +1021,6 @@ svg{display:block}
   </section>
 
 
-</div>
-
-<!-- ══════════════ Dialog ══════════════ -->
-<div class="scrim" id="scrim" hidden>
-  <div class="dialog" role="dialog" aria-modal="true">
-    <div class="dialog-icon"><span data-icon="save"></span></div>
-    <h2>应用设置</h2>
-    <p id="dlgDesc">以下改动将写入 SharedPreferences("perf") 并发布快照。</p>
-    <div class="dialog-code"><pre id="dlgPayload"></pre></div>
-    <p class="dialog-note">App 内由 NF 桥接写本地 perf 表并调用 publishSettings()，SystemUI 每秒轮询生效；浏览器预览时使用 localStorage 演示。下方 settings 命令仅供诊断。</p>
-    <div class="dialog-actions">
-      <button class="text-btn" id="dlgCancel">取消</button>
-      <button class="filled-btn" id="dlgApply">应用设置</button>
-    </div>
-  </div>
 </div>
 
 <!-- ══════════════ 应用白名单选择器 ══════════════ -->
@@ -1169,9 +1150,9 @@ const TEXT_COLORS = ['#FFFFFF','#111111','#6DB0FF','#34D399','#FBBF24','#F87171'
 const TEXT_COLOR_NAMES = ['白','黑','蓝','绿','黄','红','紫','青'];
 
 const MODULES = [
-  {idx:0,  key:'mod_clock',    label:'时间',     icon:'clock',       sub:[{key:'mod_clock_24h',label:'24 小时制'}]},
-  {idx:2,  key:'mod_cpu',      label:'CPU',      icon:'cpu',         nameKey:'name_mod_cpu',      sub:[{key:'mod_cpu_freq',label:'显示 CPU 频率'}]},
-  {idx:4,  key:'mod_gpu',      label:'GPU',      icon:'gpu',         nameKey:'name_mod_gpu',      sub:[{key:'mod_gpu_freq',label:'显示 GPU 频率'}]},
+  {idx:0,  key:'mod_clock',    label:'时间',     icon:'clock'},
+  {idx:2,  key:'mod_cpu',      label:'CPU',      icon:'cpu',         nameKey:'name_mod_cpu'},
+  {idx:4,  key:'mod_gpu',      label:'GPU',      icon:'gpu',         nameKey:'name_mod_gpu'},
   {idx:6,  key:'mod_ram',      label:'RAM',      icon:'memory',      nameKey:'name_mod_ram'},
   {idx:7,  key:'mod_zram',     label:'ZRAM',     icon:'layers',      nameKey:'name_mod_zram'},
   {idx:8,  key:'mod_temp',     label:'温度',     icon:'thermometer', nameKey:'name_mod_temp'},
@@ -1406,10 +1387,7 @@ function syncInputs(){
   document.getElementById('statModules').textContent = enabled+' / 11';
   document.getElementById('modCount').textContent = enabled+' 项启用';
 
-  // FAB + 快照
-  const dirty = changedKeys();
-  document.getElementById('fabHolder').hidden = dirty.length === 0;
-  document.getElementById('fabLabel').textContent = `应用 ${dirty.length} 项更改`;
+  // 快照
   const payload = document.getElementById('payload');
   payload.innerHTML = snapshotLines().map(l=>{
     const i = l.indexOf('=');
@@ -1419,7 +1397,7 @@ function syncInputs(){
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function onStateChange(){
-  persist(); syncInputs();
+  persist(); baseline = {...state}; syncInputs();
 }
 
 /* ───────────────────────── 6. 监视项目列表 ───────────────────────── */
@@ -1436,34 +1414,29 @@ function parseSpaces(str){
 }
 
 function renderModules(){
-  const open = new Set([...document.querySelectorAll('.mod-item.open')].map(el=>el.dataset.mod));
   const box = document.getElementById('moduleList');
   const arr = orderArr();
   box.innerHTML = arr.map((idx)=>{
     const m = MODULES.find(x=>x.idx===idx);
     const on = !!state[m.key];
-    const hasSub = m.sub && m.sub.length;
-    return `<div class="mod-item ${on?'on':''} ${open.has(m.key)?'open':''}" data-mod="${m.key}">
+    // lull.20：次选面板移除——mod_cpu_freq/mod_gpu_freq 与外观页「图表与频率」重复；
+    // 24 小时制拍平为时间行下方的一行
+    const subRow = m.key === 'mod_clock'
+      ? '<div class="mod-sub-row"><div class="row-text"><b>24 小时制</b><small>横条时钟的时间格式</small></div><label class="switch"><input type="checkbox" data-key="mod_clock_24h" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>'
+      : '';
+    return `<div class="mod-item ${on?'on':''}" data-mod="${m.key}">
       <div class="mod-main">
         <span class="mod-icon">${svg(m.icon)}</span>
-        <div class="mod-info" ${hasSub?`data-expand="${m.key}"`:''}>
+        <div class="mod-info">
           <b>${m.label}</b><small>${m.key}</small>
         </div>
         <div class="mod-tools">
-          ${hasSub?`<button class="mod-expand" data-expand="${m.key}" title="展开">${svg('chevron')}</button>`:''}
           <label class="switch"><input type="checkbox" data-key="${m.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label>
         </div>
       </div>
-      ${hasSub?`<div class="mod-detail"><div class="mod-detail-inner"><div class="mod-detail-pad">
-        ${m.sub.map(s=>`<div class="mod-sub"><b>${s.label}</b><label class="switch"><input type="checkbox" data-key="${s.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>`).join('')}
-      </div></div></div>`:''}
+      ${subRow}
     </div>`;
   }).join('');
-  // 展开状态：重新绑定事件（整块重绘）；排序/名称/前置空格已移除（lull.17）
-  box.querySelectorAll('[data-expand]').forEach(el=>el.addEventListener('click',()=>{
-    const item = el.closest('.mod-item');
-    item.classList.toggle('open');
-  }));
   bindInputs(box);
   syncInputs();
 }
@@ -1518,7 +1491,7 @@ function switchTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
   const names = {status:'控制台',modules:'监视项目',appearance:'外观与校正',advanced:'高级设置'};
-  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.19';
+  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.20';
   document.getElementById('scroll').scrollTop = 0;
 }
 /* ───────────────── 真实 GPU 读数（仅 App WebView 内） ───────────────── */
@@ -1630,15 +1603,6 @@ function bindAppPicker(){
   });
 }
 
-function openDialog(){
-  const dirty = changedKeys();
-  document.getElementById('dlgDesc').textContent = `以下 ${dirty.length} 项改动将写入 SharedPreferences("perf") 并发布快照。`;
-  document.getElementById('dlgPayload').textContent =
-    (dirty.length ? dirty.sort().map(k=>`${k}=${keyType(k)}:${state[k]}`).join('\n') : snapshotText())
-    + '\n\n' + shellCommand();
-  document.getElementById('scrim').hidden = false;
-}
-
 /* lull.16/17：以下选项已从界面移除。启动时把设备 perf 表里对应键删掉
    （commit null），让 NexusBridge 回退内置默认。删完后 state/baseline/
    deviceState 回填 DEFAULTS 同值——预览渲染（排序/名称）仍需要这些键，
@@ -1733,17 +1697,7 @@ function init(){
   });
 
   // 应用 / 复制 / dialog
-  document.getElementById('applyBtn').addEventListener('click', openDialog);
-  document.getElementById('dlgCancel').addEventListener('click',()=>document.getElementById('scrim').hidden = true);
-  document.getElementById('scrim').addEventListener('click',e=>{
-    if(e.target.id === 'scrim') document.getElementById('scrim').hidden = true;
-  });
-  document.getElementById('dlgApply').addEventListener('click',()=>{
-    NFBridge.publish(snapshotLines());
-    baseline = {...state}; persist(); syncInputs();
-    document.getElementById('scrim').hidden = true;
-    toast('设置已发布 · SystemUI 约 1 秒后生效');
-  });
+  // 应用流程已移除（lull.20）：开关即改即生效，桥接层每次变更自动 commit+防抖 publish
   document.getElementById('copyBtn').addEventListener('click',async()=>{
     try{ await navigator.clipboard.writeText(shellCommand()); toast('已复制 settings 命令'); }
     catch(err){

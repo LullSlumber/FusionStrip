@@ -812,11 +812,8 @@ public class MonitorView extends LinearLayout {
             if (g == null || g.views.isEmpty()) {
                 continue;
             }
-            // v1.8.9：FPS 项目默认再少一个空格——它前面是分隔条，
-            // 默认把 FPS 组往左拉一个空格宽，贴得更近一点
-            if (idx == Constants.Modules.IDX_FPS) {
-                count -= 1;
-            }
+            // v1.8.9 的「FPS 少一个空格」特例已移除（lull.20）：所有模块前置间距一致，
+            // 不再把 FPS 往左拉，否则 FPS 前的间隔明显比别处窄
             View first = g.views.get(0);
             ViewGroup.LayoutParams lp = first.getLayoutParams();
             if (lp instanceof LinearLayout.LayoutParams) {
