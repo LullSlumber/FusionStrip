@@ -87,15 +87,19 @@ class WebUiActivity : Activity() {
             setOnApplyWindowInsetsListener { _, insets ->
                 val top: Int
                 val bottom: Int
+                // insets 是物理像素，页面 CSS 用的是逻辑像素（dp）：
+                // 直接透传会在高密度屏上把 --nf-sat/--nf-sab 放大 density 倍，
+                // 顶栏/底栏让位区域变成天大的空白（lull.15 及之前的真机截图实锤）。
+                val density = resources.displayMetrics.density
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     val bars = insets.getInsets(WindowInsets.Type.systemBars())
-                    top = bars.top
-                    bottom = bars.bottom
+                    top = (bars.top / density).toInt()
+                    bottom = (bars.bottom / density).toInt()
                 } else {
                     @Suppress("DEPRECATION")
-                    top = insets.systemWindowInsetTop
+                    top = (insets.systemWindowInsetTop / density).toInt()
                     @Suppress("DEPRECATION")
-                    bottom = insets.systemWindowInsetBottom
+                    bottom = (insets.systemWindowInsetBottom / density).toInt()
                 }
                 pendingTop = top
                 pendingBottom = bottom

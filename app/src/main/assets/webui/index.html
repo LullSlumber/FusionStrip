@@ -734,7 +734,7 @@ svg{display:block}
   html,body{height:auto;min-height:100%}
   .shell{display:flex;flex-direction:column;height:auto;min-height:100dvh;max-width:560px;overflow:visible}
   .stage{
-    order:-1;position:sticky;top:0;z-index:30;overflow:visible;
+    position:sticky;top:0;z-index:30;overflow:visible;
     padding:calc(12px + var(--nf-sat)) 14px 10px;gap:8px;
     background:color-mix(in srgb,var(--md-sys-color-surface-container-low) 82%,transparent);
     -webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);
@@ -792,7 +792,7 @@ svg{display:block}
         <h1>FusionStrip</h1>
         <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
         <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.15</span>
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.16</span>
           <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
           <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
         </div>
@@ -992,48 +992,17 @@ svg{display:block}
             <div class="slider-wrap"><input type="range" min="0" max="300" step="5" data-key="wake_interval_sec" data-type="i" data-unit=" s"><div class="slider-tip"></div></div>
             <div class="slider-scale"><span>0 = 关闭</span><span>300 s</span></div>
           </div>
-          <div class="row">
-            <span class="row-icon" data-icon="battery"></span>
-            <div class="row-text"><b>双电芯</b><small>功率与电流按 2 倍显示</small></div>
-            <label class="switch"><input type="checkbox" data-key="dual_cell" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
         </div>
 
         <div class="group-title">FPS 来源 <span class="count-pill">按序回退</span></div>
-        <p class="group-hint">数值后的字母是诊断标记。某一路在这台机器上不准，按字母关掉即可。</p>
         <div class="card">
-          <div class="preset-block">
-            <div class="sub-label">快速预设</div>
-            <div class="segmented" id="presetSeg">
-              <button class="seg" data-preset="all">全部</button>
-              <button class="seg active" data-preset="qualcomm">高通</button>
-              <button class="seg" data-preset="mediatek">联发科</button>
-            </div>
-          </div>
-          <div class="row fps-row"><span class="fps-tag">p</span><div class="row-text"><b>面板 measured_fps</b><small>高通专有 · 瞬时帧率</small></div><label class="switch"><input type="checkbox" data-key="fps_src_panel" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row fps-row"><span class="fps-tag">b</span><div class="row-text"><b>SurfaceFlinger latency</b><small>Binder 取层时间戳</small></div><label class="switch"><input type="checkbox" data-key="fps_src_sf_latency" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row fps-row"><span class="fps-tag">t</span><div class="row-text"><b>SurfaceFlinger TimeStats</b><small>逐层帧统计 · Android 14+</small></div><label class="switch"><input type="checkbox" data-key="fps_src_sf_timestats" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row fps-row"><span class="fps-tag">g</span><div class="row-text"><b>FPSGO</b><small>联发科内核逐进程统计</small></div><label class="switch"><input type="checkbox" data-key="fps_src_fpsgo" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row fps-row"><span class="fps-tag">f</span><div class="row-text"><b>GED KPI</b><small>联发科 GED 模块</small></div><label class="switch"><input type="checkbox" data-key="fps_src_ged" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row fps-row"><span class="fps-tag">v</span><div class="row-text"><b>Choreographer</b><small>仅测屏幕刷新率 · 兜底</small></div><label class="switch"><input type="checkbox" data-key="fps_src_vsync" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
+          <div class="row"><span class="row-icon" data-icon="activity"></span><div class="row-text"><b>FPS 来源 · 高通预设</b><small>面板 measured_fps → TimeStats 兜底，按序回退</small></div></div>
         </div>
 
         <div class="group-title">取数与诊断</div>
         <div class="card">
           <div class="row"><span class="row-icon" data-icon="terminal"></span><div class="row-text"><b>SurfaceFlinger 走 root</b><small>sf_prefer_root</small></div><label class="switch"><input type="checkbox" data-key="sf_prefer_root" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
           <div class="row"><span class="row-icon" data-icon="bug"></span><div class="row-text"><b>FPS 诊断</b><small>数值后显示来源字母</small></div><label class="switch"><input type="checkbox" data-key="fps_debug" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-        </div>
-
-        <div class="group-title">充电与使用统计</div>
-        <div class="card">
-          <div class="row"><span class="row-icon" data-icon="chart"></span><div class="row-text"><b>开启统计</b><small>后台长期记录电池与应用用电</small></div><label class="switch"><input type="checkbox" data-key="stats_enabled" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="slider-block">
-            <div class="slider-head"><span>采样间隔</span><output data-for="stats_interval_sec">15 s</output></div>
-            <div class="slider-wrap"><input type="range" min="5" max="120" step="5" data-key="stats_interval_sec" data-type="i" data-unit=" s"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>5 s</span><span>120 s</span></div>
-          </div>
-          <div class="row"><span class="row-icon" data-icon="bell"></span><div class="row-text"><b>常驻通知</b><small>关掉只是不显示通知，采样照跑</small></div><label class="switch"><input type="checkbox" data-key="stats_notification" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row"><span class="row-icon" data-icon="sun"></span><div class="row-text"><b>仅亮屏时记录</b><small>充电期间自动失效</small></div><label class="switch"><input type="checkbox" data-key="stats_screen_on_only" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
         </div>
 
         <div class="group-title">本界面外观 <span class="count-pill">不影响 HUD</span></div>
@@ -1257,20 +1226,17 @@ const DEFAULTS = {
   cpu_bar:true, gpu_bar:true, mod_background:false, auto_contrast:false,
   text_color:0, font_size_sp:7, font_bold:true, spacing_dp:8,
   offset_x:0, offset_y:0,
-  // 采样 / 电源
-  update_interval_ms:1000, wake_interval_sec:15, dual_cell:false,
-  // FPS 来源（默认高通预设）
-  fps_src_panel:true, fps_src_sf_latency:false, fps_src_sf_timestats:true,
-  fps_src_fpsgo:false, fps_src_ged:false, fps_src_vsync:false,
+  // 采样 / 电源（双电芯选项已移除：按单电芯显示）
+  update_interval_ms:1000, wake_interval_sec:15,
+  // FPS 来源固定高通预设；SurfaceFlinger root / 诊断保留
   sf_prefer_root:false, fps_debug:false,
-  // 统计
-  stats_enabled:true, stats_interval_sec:15, stats_notification:true, stats_screen_on_only:false,
+  // 统计设置已移除：走原生默认（开启统计 · 15s · 常驻通知 · 不限亮屏）
   // 仅本界面
   app_theme:0,
 };
 const TYPES = {
   text_color:'i', font_size_sp:'f', spacing_dp:'f', offset_x:'i', offset_y:'i',
-  update_interval_ms:'i', wake_interval_sec:'i', stats_interval_sec:'i', app_theme:'i',
+  update_interval_ms:'i', wake_interval_sec:'i', app_theme:'i',
 };
 const keyType = k => TYPES[k] || (typeof DEFAULTS[k] === 'boolean' ? 'b' : 's');
 const TEXT_COLORS = ['#FFFFFF','#111111','#6DB0FF','#34D399','#FBBF24','#F87171','#C084FC','#22D3EE'];
@@ -1507,10 +1473,6 @@ function syncInputs(){
   document.querySelectorAll('#themeSeg .seg').forEach(b=>b.classList.toggle('active',
     ({auto:0,light:1,dark:2})[b.dataset.mode] === state.app_theme));
   document.querySelectorAll('#seedChips .seed-chip').forEach(b=>b.classList.toggle('active', b.dataset.seed === ui.seed));
-  const fpsFlags = ['fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats','fps_src_fpsgo','fps_src_ged','fps_src_vsync']
-    .map(k=>state[k]?1:0).join('');
-  const presetOf = {'111111':'all','101000':'qualcomm','011110':'mediatek'};
-  document.querySelectorAll('#presetSeg .seg').forEach(b=>b.classList.toggle('active', presetOf[fpsFlags] === b.dataset.preset));
 
   // 状态卡
   document.getElementById('statInterval').textContent = (state.update_interval_ms/1000).toFixed(1)+' s';
@@ -1633,7 +1595,7 @@ function restartSim(){
   if(ui.playing) simTimer = setInterval(tickSim, Math.max(300, state.update_interval_ms));
 }
 function hudValue(k){
-  const d = state.dual_cell ? 2 : 1;
+  const d = 1;   // 双电芯选项已移除，固定 1 倍
   switch(k){
     case 'mod_clock': {
       const d2 = new Date();
@@ -1720,11 +1682,7 @@ function renderHUD(){
     `${ui.orient==='portrait'?'竖屏':'横屏'} · ${reasons.length?'HUD 隐藏':'HUD 可见'} · ${enabledPresetName()}`;
 }
 function enabledPresetName(){
-  const f = ['fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats','fps_src_fpsgo','fps_src_ged','fps_src_vsync'].map(k=>state[k]?1:0).join('');
-  if(f==='111111') return 'FPS 全部来源';
-  if(f==='101000') return 'FPS 高通预设';
-  if(f==='011110') return 'FPS 联发科预设';
-  return 'FPS 自定义';
+  return 'FPS 高通预设';   // lull.16：来源选择已移除，固定高通组合
 }
 
 /* ───────────────────────── 8. 事件绑定 ───────────────────────── */
@@ -1901,8 +1859,37 @@ function openDialog(){
   document.getElementById('scrim').hidden = false;
 }
 
+/* lull.16：双电芯 / FPS 来源 / 统计设置已从界面移除。
+   启动时把设备 perf 表里对应键删掉（commit null），让 NexusBridge 回退内置默认
+   （FPS=高通组合：面板→TimeStats；统计开启·15s·常驻通知·不限亮屏）。幂等。 */
+const REMOVED_KEYS = ['dual_cell','fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats',
+  'fps_src_fpsgo','fps_src_ged','fps_src_vsync','stats_enabled','stats_interval_sec',
+  'stats_notification','stats_screen_on_only'];
+function purgeRemovedKeys(){
+  if(!hasNative()) return;
+  const diff = {};
+  REMOVED_KEYS.forEach(k=>diff[k]=null);
+  try{ window.NF.commit(JSON.stringify(diff)); }catch(e){}
+  REMOVED_KEYS.forEach(k=>{ delete state[k]; delete baseline[k]; if(deviceState) delete deviceState[k]; });
+}
+
+/* lull.16：窄屏时把预览舞台从 shell 尾部移到顶栏之后（顶栏→预览→内容），
+   宽屏（桌面双栏）保持原位；窗口尺寸变化时自动归位。 */
+const narrowMq = matchMedia('(max-width:960px)');
+function placeStage(){
+  const stage = document.querySelector('.stage');
+  const webui = document.getElementById('webui');
+  const scroll = document.getElementById('scroll');
+  if(!stage || !webui || !scroll) return;
+  if(narrowMq.matches){ webui.insertBefore(stage, scroll); }
+  else { webui.parentElement.appendChild(stage); }
+}
+
 function init(){
   load();
+  purgeRemovedKeys();
+  placeStage();
+  narrowMq.addEventListener('change', placeStage);
   mountIcons();
   resolveTheme();
   renderModules();
@@ -1955,22 +1942,6 @@ function init(){
     if(state.auto_contrast){ toast('自动反色开启时不能手动选色'); return; }
     setKey('text_color', +b.dataset.value);
     toast('字体颜色：'+TEXT_COLOR_NAMES[+b.dataset.value]);
-  });
-
-  // FPS 预设
-  const PRESETS = {
-    all:      [1,1,1,1,1,1],
-    qualcomm: [1,0,1,0,0,0],
-    mediatek: [0,1,1,1,1,0],
-  };
-  document.getElementById('presetSeg').addEventListener('click',e=>{
-    const b = e.target.closest('[data-preset]'); if(!b) return;
-    const keys = ['fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats','fps_src_fpsgo','fps_src_ged','fps_src_vsync'];
-    const vals = PRESETS[b.dataset.preset];
-    keys.forEach((k,i)=>state[k] = !!vals[i]);
-    document.querySelectorAll('#presetSeg .seg').forEach(x=>x.classList.toggle('active',x===b));
-    onStateChange();
-    toast('已应用 '+b.textContent.trim()+' 预设');
   });
 
   // 舞台：方向 / 播放 / 场景条件
