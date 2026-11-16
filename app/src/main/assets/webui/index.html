@@ -792,7 +792,7 @@ svg{display:block}
         <h1>FusionStrip</h1>
         <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
         <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.17</span>
+          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.18</span>
           <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
           <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
         </div>
@@ -870,6 +870,13 @@ svg{display:block}
           </div>
           <p class="card-note">监视条是独立悬浮窗，横屏全屏场景不依赖下拉状态栏。GPU 数据需要 root；管理器未授权时其余指标照常工作。</p>
         </div>
+  <div class="payload-card">
+        <div class="payload-head">
+          <div><b>配置快照</b><small>perf → Settings.Global · nexusfloat_prefs</small></div>
+          <button class="text-btn" id="copyBtn"><span data-icon="copy"></span>复制命令</button>
+        </div>
+        <pre class="payload" id="payload"></pre>
+      </div>
       </section>
 
       <!-- ───────── 项目 ───────── -->
@@ -1039,58 +1046,7 @@ svg{display:block}
     </nav>
   </section>
 
-  <!-- ══════════════ 右：HUD 实时预览舞台 ══════════════ -->
-  <aside class="stage">
-    <div class="stage-head">
-      <div>
-        <div class="stage-eyebrow">LIVE PREVIEW · 状态栏顶部</div>
-        <h2>HUD 实时预览</h2>
-      </div>
-      <div class="stage-tools">
-        <div class="segmented compact" id="orientSeg">
-          <button class="seg active" data-orient="portrait">竖屏</button>
-          <button class="seg" data-orient="landscape">横屏</button>
-        </div>
-        <button class="icon-btn" id="playBtn" title="暂停 / 继续数值模拟"><span data-icon="pause"></span></button>
-      </div>
-    </div>
 
-    <div class="stage-canvas">
-      <div class="device portrait" id="device">
-        <div class="wallpaper"></div>
-        <div class="wallpaper-glow"></div>
-        <div class="status-bar">
-          <span class="sb-time" id="sbTime">06:07</span>
-          <span class="sb-icons">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.8a16 16 0 0 1 20 0M5 12.8a11 11 0 0 1 14 0M8.5 16.8a6 6 0 0 1 7 0"/><path d="M12 21h.01" stroke-width="3"/></svg>
-            <svg viewBox="0 0 24 24" width="14" height="13" fill="currentColor"><path d="M2 17h3v4H2zm5-4h3v8H7zm5-4h3v12h-3zm5-5h3v17h-3z" opacity=".9"/></svg>
-            <svg viewBox="0 0 26 14" width="20" height="12" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="21" height="12" rx="3"/><rect x="3" y="3" width="14" height="8" rx="1.5" fill="currentColor" stroke="none"/><path d="M24 5v4" stroke-linecap="round" stroke-width="2.5"/></svg>
-          </span>
-        </div>
-        <div class="hud" id="hud"></div>
-        <div class="screen-body">
-          <div class="screen-app"><span data-icon="gamepad"></span></div>
-          <div class="screen-lines"><i></i><i></i><i></i></div>
-        </div>
-        <div class="screen-caption">屏幕顶部 · 状态栏区域（HUD 为独立悬浮窗）</div>
-        <div class="hud-hidden" id="hudHidden" hidden>当前屏幕方向已隐藏监视条</div>
-      </div>
-      <div class="stage-legend">
-        <button class="cond-chip" id="condCharge" title="模拟电池充电状态">充电中</button>
-        <button class="cond-chip" id="condScreen" title="模拟亮屏 / 息屏">亮屏</button>
-        <button class="cond-chip" id="condApp" title="模拟当前应用是否在白名单内">白名单内</button>
-        <span class="legend-status" id="legendDir">竖屏 · HUD 可见</span>
-      </div>
-    </div>
-
-    <div class="payload-card">
-      <div class="payload-head">
-        <div><b>配置快照</b><small>perf → Settings.Global · nexusfloat_prefs</small></div>
-        <button class="text-btn" id="copyBtn"><span data-icon="copy"></span>复制命令</button>
-      </div>
-      <pre class="payload" id="payload"></pre>
-    </div>
-  </aside>
 </div>
 
 <!-- ══════════════ Dialog ══════════════ -->
@@ -1481,7 +1437,6 @@ function syncInputs(){
     const i = l.indexOf('=');
     return `<span class="k">${esc(l.slice(0,i))}</span>=<span class="v">${esc(l.slice(i+1))}</span>`;
   }).join('\n');
-  renderHUD();
 }
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -1535,119 +1490,8 @@ function renderModules(){
   syncInputs();
 }
 
-/* ───────────────────────── 7. HUD 实时渲染 ───────────────────────── */
-const sim = {cpu:34,gpu:62,ram:71,zram:18,temp:36.2,power:-4.8,current:-1180,
-             fps:119,cputemp:48,net:1.24, cores:[22,41,18,56,33,29,47,25]};
-let simTimer = null;
-function jitter(v,amt,min,max){ return Math.min(max,Math.max(min, v+(Math.random()-.5)*amt)); }
-function tickSim(){
-  sim.cpu = jitter(sim.cpu,10,3,96);
-  sim.gpu = jitter(sim.gpu,9,2,99);
-  sim.ram = jitter(sim.ram,1.2,58,88);
-  sim.zram = jitter(sim.zram,1.5,8,36);
-  sim.temp = jitter(sim.temp,.6,29,43);
-  sim.power = jitter(sim.power,2.2,-18,24);
-  sim.current = jitter(sim.current,380,-4200,5100);
-  sim.fps = jitter(sim.fps,5,58,121);
-  sim.cputemp = jitter(sim.cputemp,2,36,72);
-  sim.net = jitter(sim.net,.8,0,9.9);
-  sim.cores = sim.cores.map(v=>jitter(v,18,4,98));
-  renderHUD();
-}
-function restartSim(){
-  if(simTimer) clearInterval(simTimer);
-  if(ui.playing) simTimer = setInterval(tickSim, Math.max(300, state.update_interval_ms));
-}
-function hudValue(k){
-  const d = 1;   // 双电芯选项已移除，固定 1 倍
-  switch(k){
-    case 'mod_clock': {
-      const d2 = new Date();
-      if(state.mod_clock_24h) return `${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`;
-      const h = d2.getHours()%12 || 12;
-      return `${h}:${String(d2.getMinutes()).padStart(2,'0')} ${d2.getHours()<12?'AM':'PM'}`;
-    }
-    case 'mod_cpu': return Math.round(sim.cpu)+'%';
-    case 'mod_gpu': return Math.round(sim.gpu)+'%';
-    case 'mod_ram': return Math.round(sim.ram)+'%';
-    case 'mod_zram': return Math.round(sim.zram)+'%';
-    case 'mod_temp': return sim.temp.toFixed(1)+'°';
-    case 'mod_power': return (sim.power*d).toFixed(1)+'W';
-    case 'mod_current': return Math.round(sim.current*d)+'mA';
-    case 'mod_fps': return Math.round(sim.fps)+(state.fps_debug?'p':'');
-    case 'mod_cpu_temp': return Math.round(sim.cputemp)+'°';
-    case 'mod_net': return sim.net.toFixed(2)+'MB/s';
-  }
-  return '--';
-}
-function hudBars(k){
-  if(k==='mod_cpu' && state.cpu_bar && state.mod_cpu){
-    return `<span class="bars">${sim.cores.map(v=>`<i class="${v>85?'hi':''}" style="--v:${Math.max(12,v).toFixed(0)}%"></i>`).join('')}</span>`;
-  }
-  if(k==='mod_gpu' && state.gpu_bar && state.mod_gpu){
-    return `<span class="bars"><i class="${sim.gpu>85?'hi':''}" style="--v:${Math.max(12,sim.gpu).toFixed(0)}%"></i></span>`;
-  }
-  return '';
-}
-function hudFreq(k){
-  if(k==='mod_cpu' && state.mod_cpu_freq) return '<span class="sub">(0.7-4.3)</span>';
-  if(k==='mod_gpu' && state.mod_gpu_freq) return `<span class="sub">(${Math.round(420+sim.gpu*6)})</span>`;
-  return '';
-}
-function hudVisibility(){
-  const reasons = [];
-  if(ui.orient === 'portrait' && !state.show_portrait) reasons.push('竖屏已关闭');
-  if(ui.orient === 'landscape' && !state.show_landscape) reasons.push('横屏已关闭');
-  if(!ui.cond.screen && !state.show_screen_off) reasons.push('息屏隐藏');
-  if(!ui.cond.charge && state.show_charging_only) reasons.push('未在充电');
-  if(!ui.cond.app && state.app_filter) reasons.push('应用不在白名单');
-  return reasons;
-}
-function renderHUD(){
-  const hud = document.getElementById('hud');
-  const scale = 2.05;
-  const fs = state.font_size_sp * scale;
-  hud.style.setProperty('--hud-fs', fs.toFixed(1)+'px');
-  hud.style.setProperty('--hud-fw', state.font_bold ? '700' : '400');
-  hud.style.setProperty('--hud-stroke', state.font_bold ? '2.25' : '2');
-  hud.style.setProperty('--hud-gap', (state.spacing_dp*scale*.75).toFixed(1)+'px');
-  hud.style.setProperty('--hud-inner-gap', (2*scale).toFixed(1)+'px');
-  hud.style.setProperty('--hud-icon', (fs*1.1).toFixed(1)+'px');
-  hud.style.setProperty('--hud-bar-h', (fs*.9).toFixed(1)+'px');
-  hud.style.setProperty('--hud-space-w', (fs*.42).toFixed(1)+'px');
-  hud.style.setProperty('--hud-x', (state.offset_x/3).toFixed(1)+'px');
-  hud.style.setProperty('--hud-y', (state.offset_y/6).toFixed(1)+'px');
-  hud.style.setProperty('--hud-bg', state.mod_background ? 'rgba(48,48,48,.70)' : 'transparent');
-  hud.style.setProperty('--hud-pad', state.mod_background ? '3px 8px' : '0');
-  const dark = document.documentElement.dataset.theme === 'dark';
-  const color = state.auto_contrast ? (dark ? '#F2F5FF' : '#111111') : TEXT_COLORS[state.text_color];
-  hud.style.setProperty('--hud-color', color);
+/* 7. HUD 实时渲染（lull.18 随预览舞台移除） */
 
-  const spaces = parseSpaces(state.space_before);
-  const html = orderArr().map(idx=>{
-    const m = MODULES.find(x=>x.idx===idx);
-    if(!state[m.key]) return '';
-    const nm = m.nameKey ? state[m.nameKey] : '';
-    const lead = m.key==='mod_clock' ? '' : (nm ? `<span class="label">${esc(nm)}</span>` : svg(m.icon));
-    const sp = (spaces[m.key]||0) > 0
-      ? `<span class="hud-space" style="width:${(fs*.42*spaces[m.key]).toFixed(1)}px"></span>` : '';
-    return `${sp}<span class="mi">${lead}${hudBars(m.key)}<span class="num">${hudValue(m.key)}</span>${hudFreq(m.key)}</span>`;
-  }).filter(Boolean).join('');
-  hud.innerHTML = html || '<span class="mi"><span class="num">未启用任何项目</span></span>';
-
-  const reasons = hudVisibility();
-  hud.hidden = reasons.length > 0;
-  const hid = document.getElementById('hudHidden');
-  hid.hidden = reasons.length === 0;
-  hid.textContent = reasons.length ? `监视条已隐藏 · ${reasons.join(' / ')}` : '';
-  document.getElementById('sbTime').textContent =
-    ui.orient==='portrait' ? hudValue('mod_clock').replace(/ AM| PM/,'') : hudValue('mod_clock').replace(/ AM| PM/,'');
-  document.getElementById('legendDir').textContent =
-    `${ui.orient==='portrait'?'竖屏':'横屏'} · ${reasons.length?'HUD 隐藏':'HUD 可见'} · ${enabledPresetName()}`;
-}
-function enabledPresetName(){
-  return 'FPS 高通预设';   // lull.16：来源选择已移除，固定高通组合
-}
 
 /* ───────────────────────── 8. 事件绑定 ───────────────────────── */
 function bindInputs(root){
@@ -1661,7 +1505,6 @@ function bindInputs(root){
       else if(el.type === 'range') v = keyType(k)==='f' ? parseFloat(el.value) : parseInt(el.value,10);
       else v = el.value;
       setKey(k,v);
-      if(k === 'update_interval_ms') restartSim();
     };
     el.addEventListener(el.tagName === 'TEXTAREA' || el.type === 'text' ? 'input' : 'change', handler);
     if(el.type === 'range') el.addEventListener('input', ()=>{
@@ -1844,29 +1687,14 @@ function purgeRemovedKeys(){
   });
 }
 
-/* lull.16：窄屏时把预览舞台从 shell 尾部移到顶栏之后（顶栏→预览→内容），
-   宽屏（桌面双栏）保持原位；窗口尺寸变化时自动归位。 */
-const narrowMq = matchMedia('(max-width:960px)');
-function placeStage(){
-  const stage = document.querySelector('.stage');
-  const webui = document.getElementById('webui');
-  const scroll = document.getElementById('scroll');
-  if(!stage || !webui || !scroll) return;
-  if(narrowMq.matches){ webui.insertBefore(stage, scroll); }
-  else { webui.parentElement.appendChild(stage); }
-}
-
 function init(){
   load();
   purgeRemovedKeys();
-  placeStage();
-  narrowMq.addEventListener('change', placeStage);
   mountIcons();
   resolveTheme();
   renderModules();
   bindInputs();
   syncInputs();
-  restartSim();
   startGpuPolling();
   startDiagPolling();
   bindAppPicker();
@@ -1885,7 +1713,7 @@ function init(){
     const dark = document.documentElement.dataset.theme === 'dark';
     ui.mode = dark ? 'light' : 'dark';
     setKey('app_theme', dark ? 1 : 2);
-    resolveTheme(); syncInputs(); renderHUD();
+    resolveTheme(); syncInputs();
   });
   document.getElementById('seedBtn').addEventListener('click',()=>{
     const list = Object.keys(SEEDS);
@@ -1897,14 +1725,14 @@ function init(){
     const b = e.target.closest('[data-mode]'); if(!b) return;
     ui.mode = b.dataset.mode;
     setKey('app_theme', ({auto:0,light:1,dark:2})[ui.mode]);
-    resolveTheme(); syncInputs(); renderHUD();
+    resolveTheme(); syncInputs();
   });
   document.getElementById('seedChips').addEventListener('click',e=>{
     const b = e.target.closest('[data-seed]'); if(!b) return;
     ui.seed = b.dataset.seed; persist(); applyPalette(); syncInputs();
   });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
-    if(ui.mode === 'auto'){ resolveTheme(); renderHUD(); }
+    if(ui.mode === 'auto'){ resolveTheme(); }
   });
 
   // 色板
@@ -1915,37 +1743,12 @@ function init(){
     toast('字体颜色：'+TEXT_COLOR_NAMES[+b.dataset.value]);
   });
 
-  // 舞台：方向 / 播放 / 场景条件
-  document.getElementById('orientSeg').addEventListener('click',e=>{
-    const b = e.target.closest('[data-orient]'); if(!b) return;
-    ui.orient = b.dataset.orient; persist();
-    document.querySelectorAll('#orientSeg .seg').forEach(x=>x.classList.toggle('active',x===b));
-    document.getElementById('device').classList.toggle('landscape', ui.orient==='landscape');
-    renderHUD();
-  });
-  document.getElementById('device').classList.toggle('landscape', ui.orient==='landscape');
-  document.querySelectorAll('#orientSeg .seg').forEach(x=>x.classList.toggle('active',x.dataset.orient===ui.orient));
-
-  document.getElementById('playBtn').addEventListener('click',e=>{
-    ui.playing = !ui.playing; persist(); restartSim();
-    e.currentTarget.innerHTML = svg(ui.playing?'pause':'play');
-  });
-  [['condCharge','charge'],['condScreen','screen'],['condApp','app']].forEach(([id,k])=>{
-    const el = document.getElementById(id);
-    el.classList.toggle('on', ui.cond[k]);
-    el.addEventListener('click',()=>{
-      ui.cond[k] = !ui.cond[k]; persist();
-      el.classList.toggle('on', ui.cond[k]);
-      renderHUD();
-    });
-  });
-
   // 动作按钮
   document.addEventListener('click',e=>{
     const b = e.target.closest('[data-action]'); if(!b) return;
     const a = b.dataset.action;
     if(a === 'reset'){
-      state = {...DEFAULTS}; onStateChange(); renderModules(); restartSim();
+      state = {...DEFAULTS}; onStateChange(); renderModules();
       toast('已恢复默认设置');
     }
     if(a === 'resetOffset'){
