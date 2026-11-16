@@ -751,7 +751,7 @@ svg{display:block}
   .screen-body{top:52px}
   .screen-caption{display:none}
   .stage-legend,.payload-card{display:none}
-  .webui{overflow:visible;border-right:0;min-height:0}
+  .webui{overflow:visible;border-right:0;min-height:100dvh}
   .scroll{overflow:visible;padding:0 14px 20px}
   .navbar{position:sticky;bottom:0}
   .fab-holder{position:fixed;bottom:calc(92px + var(--nf-sab));right:14px}
@@ -764,6 +764,7 @@ svg{display:block}
   .status-grid{grid-template-columns:1fr 1fr}
   .hero h1{font-size:28px}
 }
+
 
 </style>
 </head>
@@ -778,27 +779,14 @@ svg{display:block}
       <div class="brand-mark" data-icon="activity"></div>
       <div class="topbar-titles">
         <b>FusionStrip</b>
-        <span id="topbarSub">控制台</span>
+        <span id="topbarSub">控制台 · 1.9.4-lull.19</span>
       </div>
       <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
-      <button class="icon-btn" id="seedBtn" title="切换动态取色"><span data-icon="palette"></span></button>
       <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
     </header>
 
     <div class="scroll" id="scroll">
 
-      <div class="hero" id="hero">
-        <div class="eyebrow">LSPOSED · SYSTEMUI · WEBUI</div>
-        <h1>FusionStrip</h1>
-        <p>状态栏悬浮性能监视条 · 所见即所得控制台</p>
-        <div class="hero-meta">
-          <span class="chip chip-tonal"><span data-icon="tag"></span>1.9.4-lull.18</span>
-          <span class="chip chip-outline"><span data-icon="cpu"></span>8 Elite</span>
-          <span class="chip chip-outline"><span data-icon="shield"></span>Root</span>
-        </div>
-      </div>
-
-      <!-- ───────── 状态 ───────── -->
       <section class="page" data-page="status">
 
         <div class="group-title">运行状态</div>
@@ -831,16 +819,6 @@ svg{display:block}
             <span class="row-icon" data-icon="landscape"></span>
             <div class="row-text"><b>横屏显示</b><small>全屏游戏 / 视频时同样显示</small></div>
             <label class="switch"><input type="checkbox" data-key="show_landscape" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <div class="row">
-            <span class="row-icon" data-icon="moon"></span>
-            <div class="row-text"><b>息屏显示</b><small>关闭可省电，锁屏即隐藏</small></div>
-            <label class="switch"><input type="checkbox" data-key="show_screen_off" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <div class="row">
-            <span class="row-icon" data-icon="battery"></span>
-            <div class="row-text"><b>仅充电时显示</b><small>以电池实际进电为准，非插线状态</small></div>
-            <label class="switch"><input type="checkbox" data-key="show_charging_only" data-type="b"><span class="track"><span class="thumb"></span></span></label>
           </div>
         </div>
 
@@ -1540,7 +1518,7 @@ function switchTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
   const names = {status:'控制台',modules:'监视项目',appearance:'外观与校正',advanced:'高级设置'};
-  document.getElementById('topbarSub').textContent = names[tab];
+  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.19';
   document.getElementById('scroll').scrollTop = 0;
 }
 /* ───────────────── 真实 GPU 读数（仅 App WebView 内） ───────────────── */
@@ -1714,12 +1692,6 @@ function init(){
     ui.mode = dark ? 'light' : 'dark';
     setKey('app_theme', dark ? 1 : 2);
     resolveTheme(); syncInputs();
-  });
-  document.getElementById('seedBtn').addEventListener('click',()=>{
-    const list = Object.keys(SEEDS);
-    ui.seed = list[(list.indexOf(ui.seed)+1)%list.length];
-    persist(); applyPalette(); syncInputs();
-    toast('动态取色：'+ui.seed);
   });
   document.getElementById('themeSeg').addEventListener('click',e=>{
     const b = e.target.closest('[data-mode]'); if(!b) return;
