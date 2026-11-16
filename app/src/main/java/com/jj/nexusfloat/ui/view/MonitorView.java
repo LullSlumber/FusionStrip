@@ -559,16 +559,10 @@ public class MonitorView extends LinearLayout {
         TextView tv = new TextView(context);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp);
         // v1.8.9：粗细看 fontBold，默认加粗跟旧版一致
-        // v1.9.4-lull.7：内置字体就不再叠加 BOLD 样式——打包的两个 ttf 本身
-        // 就带正确字重，createFromFile 出来的样式标记是常规，再传 BOLD 会
-        // 触发 Skia 伪加粗（描边涂抹），数字发胀、笔画发糊
-        Typeface typeface = MonitorTypeface.get(fontBold);
-        if (typeface != null) {
-            tv.setTypeface(typeface);
-        } else {
-            tv.setTypeface(Typeface.MONOSPACE,
-                    fontBold ? Typeface.BOLD : Typeface.NORMAL);
-        }
+        // v1.9.4-lull.14：内置 Segoe UI 已移除（微软专有字体不得随 APK 分发），
+        // 固定系统等宽字体，粗细走 MONOSPACE+BOLD 样式
+        tv.setTypeface(Typeface.MONOSPACE,
+                fontBold ? Typeface.BOLD : Typeface.NORMAL);
         // v1.8.6：把 font padding 恢复回来。去掉之后中文名称（fallback 到 CJK 字体）
         // 的 ascent 偏大、字形视觉上往下掉，跟旁边的数字不在一条水平线上。
         // 留着 padding，CJK 和拉丁在行框里视觉居中才一致
@@ -589,14 +583,9 @@ public class MonitorView extends LinearLayout {
             return false;
         }
         fontBold = bold;
-        Typeface typeface = MonitorTypeface.get(bold);
         for (int i = 0; i < allTexts.size(); i++) {
-            if (typeface != null) {
-                allTexts.get(i).setTypeface(typeface);
-            } else {
-                allTexts.get(i).setTypeface(Typeface.MONOSPACE,
-                        fontBold ? Typeface.BOLD : Typeface.NORMAL);
-            }
+            allTexts.get(i).setTypeface(Typeface.MONOSPACE,
+                    fontBold ? Typeface.BOLD : Typeface.NORMAL);
         }
         // 图标线条粗细跟字体加粗联动：加粗 2.25 / 常规 2（24 视口单位）
         for (int i = 0; i < iconViews.length; i++) {
@@ -843,12 +832,7 @@ public class MonitorView extends LinearLayout {
         TextView probe = new TextView(getContext());
         probe.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSizeSp);
         // 测量探针必须跟实际显示的字体一致，列间距才不会跟着字体变
-        Typeface typeface = MonitorTypeface.get(true);
-        if (typeface != null) {
-            probe.setTypeface(typeface);
-        } else {
-            probe.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
-        }
+        probe.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
         probe.setText(" ");
         return (int) Math.ceil(probe.getPaint().measureText(" "));
     }
