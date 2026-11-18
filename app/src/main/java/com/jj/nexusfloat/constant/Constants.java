@@ -28,7 +28,7 @@ public final class Constants {
          * 每秒热路径只有「帧率全链失败」和「采样异常」两条，正常运行时都不触发。
          * 关掉是为了彻底不留余地：真出问题时改这一个常量重编，诊断信息立刻回来。
          */
-        public static final boolean LOG_ENABLED = false;
+        public static final boolean LOG_ENABLED = true;
 
         /** 数据采集和 UI 刷新间隔（毫秒）的默认值 */
         public static final int UPDATE_INTERVAL_MS = 1000;

@@ -836,7 +836,7 @@ svg{display:block}
       <div class="brand-mark" data-icon="activity"></div>
       <div class="topbar-titles">
         <b>FusionStrip</b>
-        <span id="topbarSub">项目与外观 · 1.9.4-lull.25</span>
+        <span id="topbarSub">项目与外观 · 1.9.4-lull.26</span>
       </div>
       <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
       <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
@@ -1439,7 +1439,7 @@ function switchTab(tab){
   ui.tab = tab; persist();
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
-  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.25';
+  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.26';
   document.getElementById('scroll').scrollTop = 0;
 }
 /* GPU 读数 / 设置通道诊断轮询已随状态页移除（2026-11-18）：

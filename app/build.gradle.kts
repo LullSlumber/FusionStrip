@@ -26,8 +26,8 @@ android {
         applicationId = "com.lullslumber.fusionstrip"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1090425
-        versionName = "1.9.4-lull.25"
+        versionCode = 1090426
+        versionName = "1.9.4-lull.26"
     }
 
     signingConfigs {

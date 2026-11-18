@@ -45,11 +45,22 @@ public final class NexusBridge {
         LogUtils.bindModule(xposedModule);
         try {
             SharedPreferences prefs = xposedModule.getRemotePreferences(Constants.Remote.PREFS_NAME);
+            remoteReady = prefs.getAll().size() > 0;
             LogUtils.i("NexusBridge bound, remote keys=" + prefs.getAll().size()
                     + " gpu=" + prefs.getInt(Constants.Remote.KEY_GPU_FREQ_MHZ, 0));
         } catch (Throwable t) {
+            remoteReady = false;
             LogUtils.e("NexusBridge bind prefs failed", t);
         }
+    }
+
+    /** lull.26：bindModule 时 Remote 里有没有数据（少数 ROM 模块进程也被注入才有） */
+    private static volatile boolean remoteReady;
+
+    /** 任意设置通道就绪。都不就绪 ＝ 还没读到过任何用户设置，shouldShowNow 先不显示，
+        避免启动窗口期按默认值（app_filter＝false＝不过滤）把白名单用户暴露在未勾选应用里 */
+    public static boolean isSettingsReady() {
+        return remoteReady || PrefsSnapshot.isReady() || SettingsChannel.isReady();
     }
 
     // ---- 分层读取：Remote → provider 快照 → Settings.Global → 默认值，一个个往下试 ----

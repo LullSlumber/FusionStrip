@@ -95,6 +95,10 @@ public final class MonitorOverlay {
     /** 距上次后台唤醒过了多少轮（v1.8.11） */
     private int wakeElapsedTicks;
 
+    private boolean lastShouldShow;
+    private boolean lastShouldShowValid;
+    private int diagTicks;
+
     private final Runnable watchRunnable = new Runnable() {
         @Override
         public void run() {
@@ -174,6 +178,7 @@ public final class MonitorOverlay {
         // 发了马上又得 resume，白折腾一轮跨进程调用
         lastCollectSignal = null;
         signalTicks = 0;
+        lastShouldShowValid = false;
     }
 
     public boolean isShowing() {
@@ -238,6 +243,17 @@ public final class MonitorOverlay {
         syncModuleFlags();
 
         boolean shouldShow = shouldShowNow();
+
+        // lull.26 取证：shouldShow 翻转时把判定依据全量打出来（显示期间每 10 轮复读）。
+        // 抓「未勾选应用冒 HUD」：那一拍的前台包名、白名单内容、各通道就绪状态。
+        if (!lastShouldShowValid || shouldShow != lastShouldShow) {
+            logShowDecision(shouldShow, true);
+            lastShouldShow = shouldShow;
+            lastShouldShowValid = true;
+        } else if (shouldShow && ++diagTicks >= 10) {
+            diagTicks = 0;
+            logShowDecision(shouldShow, false);
+        }
 
         if (fallbackMode) {
             int target = shouldShow ? View.VISIBLE : View.GONE;
@@ -410,12 +426,29 @@ public final class MonitorOverlay {
         return true;
     }
 
+    private void logShowDecision(boolean shouldShow, boolean isTransition) {
+        LogUtils.i("show=" + shouldShow + (isTransition ? " (transition)" : " (periodic)")
+                + " filter=" + NexusBridge.isAppFilterEnabled()
+                + " whitelist=" + NexusBridge.getWhitelist()
+                + " fg=" + foregroundTracker.getForegroundPackage()
+                + " snapReady=" + PrefsSnapshot.isReady()
+                + " globalReady=" + SettingsChannel.isReady()
+                + " remoteReady=" + NexusBridge.isRemoteReady());
+    }
+
     /**
      * 该不该显示：当前方向的开关得是开的、开了应用过滤的话前台应用得在白名单里，
      * 息屏时还得开了「息屏显示」开关（v1.8.10），开了「仅充电时显示」时还得在充电
      * （v1.8.14）。
      */
     private boolean shouldShowNow() {
+        // lull.26：一条设置通道都没读到过之前不显示。旧版在启动窗口期按默认值
+        // （app_filter=false＝不过滤）显示，白名单用户会看到 HUD 在未勾选应用里闪现；
+        // 若 provider 长期被冻结则一直按默认值显示——正是「没勾选的游戏有时候
+        // 也有」的第二根因。等任意通道就绪（通常 1-2 轮轮询内）再开始判定。
+        if (!NexusBridge.isSettingsReady()) {
+            return false;
+        }
         // 息屏（灭屏/锁屏）判定：没开「息屏显示」就直接隐藏，
         // 隐藏会一并把采集停掉，省电。开屏状态用 isInteractive 现取，
         // 广播只负责提前触发一次评估，两者不冲突
@@ -456,8 +489,8 @@ public final class MonitorOverlay {
      *
      * 没开过滤就恒为 true。开了之后：
      * 白名单为空 → 一直隐藏（用户开了过滤却一个应用没选，按字面意思办）；
-     * 读不到前台包名 → 放行。判定手段失效时宁可显示，也别让监视条无声无息地消失，
-     * 让人以为模块坏了。
+     * 读不到前台包名 → 按「不在白名单」隐藏（lull.25 改，旧版放行导致未勾选应用
+     * 随机冒 HUD）。
      */
     private boolean isForegroundAllowed() {
         if (!NexusBridge.isAppFilterEnabled()) {

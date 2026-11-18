@@ -65,6 +65,7 @@ public final class ForegroundAppTracker {
         try {
             List<ActivityManager.RunningTaskInfo> tasks = activityManager.getRunningTasks(1);
             if (tasks == null || tasks.isEmpty()) {
+                LogUtils.w("getRunningTasks empty, treating as no foreground");
                 return null;
             }
             ComponentName top = tasks.get(0).topActivity;
