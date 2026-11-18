@@ -35,7 +35,7 @@ jobs:
           mkdir -p keystore
           keytool -genkeypair -v \
             -keystore keystore/ci-release.jks \
-            -storepass nexusfloat-ci -keypass nexusfloat-ci \
+            -storepass fusionstrip-ci -keypass fusionstrip-ci \
             -alias ci -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=FusionStrip CI"
           cat > keystore.properties <<'EOF'

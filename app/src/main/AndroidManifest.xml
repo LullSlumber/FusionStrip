@@ -47,7 +47,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NexusFloat">
+        android:theme="@style/Theme.FusionStrip">
 
         <!--
             WebUI 主界面：LAUNCHER 从原 Compose MainActivity 换到这里。
@@ -58,7 +58,7 @@
         <activity
             android:name=".webui.WebUiActivity"
             android:exported="true"
-            android:theme="@style/Theme.NexusFloat">
+            android:theme="@style/Theme.FusionStrip">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
