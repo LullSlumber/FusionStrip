@@ -223,9 +223,7 @@ svg{display:block}
 /* ── MD3 List item ── */
 .row{
   display:flex;align-items:center;gap:12px;min-height:62px;padding:9px 2px;
-  border-bottom:1px solid var(--md-sys-color-outline-variant);
 }
-.row:last-child{border-bottom:0}
 .row-icon{
   width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;
   background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant);
@@ -260,8 +258,7 @@ svg{display:block}
 .switch input:disabled + .track{opacity:.4}
 
 /* ── MD3 Slider ── */
-.slider-block{padding:12px 4px 14px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
-.slider-block:last-child{border-bottom:0}
+.slider-block{padding:12px 4px 14px}
 .slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
 .slider-head span{font-size:13.5px;font-weight:500}
 .slider-head output{
@@ -317,7 +314,7 @@ svg{display:block}
 .seg.active::before{content:"✓";font-size:12px;margin-right:2px}
 .segmented.compact{width:auto;border-radius:18px}
 .segmented.compact .seg{height:32px;padding:0 14px;flex:none;font-size:11.5px}
-.preset-block{padding:12px 2px 14px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.preset-block{padding:12px 2px 14px}
 
 /* ── MD3 Buttons ── */
 .text-btn{
@@ -362,7 +359,7 @@ svg{display:block}
 .field-hint{display:block;font-size:10.5px;color:var(--md-sys-color-on-surface-variant);padding:0 4px}
 
 /* ── Color swatches ── */
-.sub-block{padding:12px 2px 14px;border-bottom:1px solid var(--md-sys-color-outline-variant)}
+.sub-block{padding:12px 2px 14px}
 .sub-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;margin-bottom:12px}
 .key-hint{
   font-family:ui-monospace,Consolas,monospace;font-size:10px;font-weight:400;
@@ -433,6 +430,61 @@ svg{display:block}
 /* ── 监视项目列表 ── */
 .mod-item{border-bottom:1px solid var(--md-sys-color-outline-variant)}
 .mod-item:last-child{border-bottom:0}
+
+/* ── 监视项目卡片网格：布局步进器同款样式，并排 3 列 ── */
+.mod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.mod-card{
+  background:var(--md-sys-color-surface-container);
+  border-radius:12px;
+  padding:9px 10px 8px;display:flex;flex-direction:column;gap:4px;min-width:0;
+  transition:background .2s;
+}
+.mod-card.on{background:var(--md-sys-color-primary-container)}
+.mod-head{display:flex;align-items:center;gap:4px}
+.mod-name{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:var(--md-sys-color-on-surface);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mod-card.on .mod-name{color:var(--md-sys-color-on-primary-container)}
+.mod-badge{flex:none;font-size:9px;font-weight:700;line-height:1;padding:3px 6px;border-radius:7px;border:0;cursor:pointer;
+  background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant)}
+.mod-card.on .mod-badge{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)}
+.mod-sub{font-size:9.5px;color:var(--md-sys-color-on-surface-variant);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mod-card.on .mod-sub{color:var(--md-sys-color-on-primary-container);opacity:.7}
+.mod-foot{display:flex;align-items:center;gap:4px;margin-top:2px;min-height:20px}
+.mod-chip{border:1px solid transparent;background:var(--md-sys-color-surface-container-high);border-radius:7px;
+  font-size:9.5px;padding:2.5px 7px;color:var(--md-sys-color-on-surface-variant);cursor:pointer;white-space:nowrap}
+.mod-chip.active{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-surface);font-weight:600}
+.mod-arrows{display:flex;gap:3px;margin-left:auto}
+.mod-arrow{min-width:26px;height:22px;border-radius:7px;border:0;cursor:pointer;
+  background:var(--md-sys-color-surface-container-high);
+  color:var(--md-sys-color-on-surface-variant);
+  display:grid;place-items:center;font-size:11px;font-weight:600;line-height:1;padding:0 7px}
+.mod-arrow:hover{background:var(--md-sys-color-surface-container-highest)}
+.mod-arrow:active{background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}
+.mod-arrow:disabled{opacity:.3;cursor:default}
+.mod-arrow:disabled:hover{background:var(--md-sys-color-surface-container-high)}
+
+/* ── 布局步进器：字号/间隔/偏移 2×2 小卡，−/＋ 调节 ── */
+.stepper-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stepper{
+  background:var(--md-sys-color-surface-container);
+  border-radius:12px;padding:10px 12px 9px;
+  display:flex;flex-direction:column;gap:8px;min-width:0;
+}
+.stepper-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.stepper-head span{font-size:12.5px;font-weight:600;color:var(--md-sys-color-on-surface);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper-val{font-size:12px;font-weight:700;color:var(--md-sys-color-primary);white-space:nowrap}
+.stepper-btns{display:flex;gap:6px}
+.st-btn{
+  flex:1;height:30px;border:0;border-radius:8px;cursor:pointer;
+  background:var(--md-sys-color-surface-container-high);
+  color:var(--md-sys-color-on-surface-variant);
+  font-size:15px;line-height:1;padding:0;
+  transition:background .15s;
+}
+.st-btn:hover{background:var(--md-sys-color-surface-container-highest)}
+.st-btn:active{background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}
 .mod-main{display:flex;align-items:center;gap:8px;min-height:60px;padding:6px 8px}
 .mod-drag{
   width:22px;flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--md-sys-color-on-surface-variant);
@@ -779,7 +831,7 @@ svg{display:block}
       <div class="brand-mark" data-icon="activity"></div>
       <div class="topbar-titles">
         <b>FusionStrip</b>
-        <span id="topbarSub">控制台 · 1.9.4-lull.20</span>
+        <span id="topbarSub">项目与外观 · 1.9.4-lull.20</span>
       </div>
       <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
       <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
@@ -787,38 +839,73 @@ svg{display:block}
 
     <div class="scroll" id="scroll">
 
-      <section class="page" data-page="status">
-
-        <div class="group-title">运行状态</div>
-        <div class="card status-card">
-          <div class="status-hero">
-            <div class="status-ring"><span data-icon="check"></span></div>
-            <div class="status-hero-text">
-              <b>模块运行中</b>
-              <small id="statusSub">设置通道已连接 · 上次同步 1 秒前</small>
-            </div>
-            <span class="badge badge-ok">已激活</span>
-          </div>
-          <div class="status-grid">
-            <div class="status-cell"><small>LSPosed 注入</small><b>系统界面</b></div>
-            <div class="status-cell"><small>GPU 实时</small><b id="statGpu">-- MHz · -- %</b></div>
-            <div class="status-cell"><small>刷新间隔</small><b id="statInterval">1.0 s</b></div>
-            <div class="status-cell"><small>启用项目</small><b id="statModules">4 / 11</b></div>
-          </div>
-          <div class="bridge-diag" id="bridgeDiag">设置通道检测中…</div>
-        </div>
-
-        <div class="group-title">显示时机</div>
+      <!-- ───────── 项目（外观并入置顶 / 显示时机·作用范围·维护并入置底） ───────── -->
+      <section class="page" data-page="modules" hidden>
+        <div class="group-title">文字</div>
         <div class="card">
           <div class="row">
-            <span class="row-icon" data-icon="smartphone"></span>
-            <div class="row-text"><b>竖屏显示</b><small>竖屏时显示监视条</small></div>
-            <label class="switch"><input type="checkbox" data-key="show_portrait" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+            <span class="row-icon" data-icon="bold"></span>
+            <div class="row-text"><b>字体加粗</b><small>系统等宽字体 + BOLD 字重样式</small></div>
+            <label class="switch"><input type="checkbox" data-key="font_bold" data-type="b"><span class="track"><span class="thumb"></span></span></label>
           </div>
+          <div class="sub-block">
+            <div class="sub-label">字体颜色 <span class="key-hint">text_color</span></div>
+            <div class="swatches" id="swatches">
+              <button class="swatch" data-value="0" style="--sw:#FFFFFF"><i></i><span>白</span></button>
+              <button class="swatch" data-value="1" style="--sw:#111111"><i></i><span>黑</span></button>
+              <button class="swatch" data-value="2" style="--sw:#6DB0FF"><i></i><span>蓝</span></button>
+              <button class="swatch" data-value="3" style="--sw:#34D399"><i></i><span>绿</span></button>
+              <button class="swatch" data-value="4" style="--sw:#FBBF24"><i></i><span>黄</span></button>
+              <button class="swatch" data-value="5" style="--sw:#F87171"><i></i><span>红</span></button>
+              <button class="swatch" data-value="6" style="--sw:#C084FC"><i></i><span>紫</span></button>
+              <button class="swatch" data-value="7" style="--sw:#22D3EE"><i></i><span>青</span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-title">监视项目 <span class="count-pill" id="modCount">4 项启用</span></div>
+        <p class="group-hint">点击「开 / 关」切换显示，− ＋ 调整监视条上的排列顺序；CPU / GPU 卡内快捷片控制频率与柱状图。</p>
+        <div class="mod-grid" id="moduleList"></div>
+
+        <div class="group-title">布局</div>
+        <div class="card">
+          <div class="stepper-grid" id="stepperGrid"></div>
+          <div class="card-actions"><button class="text-btn" data-action="resetOffset"><span data-icon="rotate"></span>复位位置</button></div>
+          <div class="row" id="contrastRow">
+            <span class="row-icon" data-icon="contrast"></span>
+            <div class="row-text"><b>自动反色</b><small>跟随状态栏图标明暗切深浅色</small></div>
+            <label class="switch"><input type="checkbox" data-key="auto_contrast" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <p class="card-note" id="contrastHint">开启后字体颜色由系统决定，色板不可用；与「显示背景」互斥。</p>
           <div class="row">
-            <span class="row-icon" data-icon="landscape"></span>
-            <div class="row-text"><b>横屏显示</b><small>全屏游戏 / 视频时同样显示</small></div>
-            <label class="switch"><input type="checkbox" data-key="show_landscape" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+            <span class="row-icon" data-icon="square"></span>
+            <div class="row-text"><b>显示背景</b><small>半透明深灰圆角底；关闭则完全透明</small></div>
+            <label class="switch"><input type="checkbox" data-key="mod_background" data-type="b"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <p class="card-note">开启背景后自动反色会置灰——两者互斥，与现有 App 行为一致。</p>
+          <div class="sub-block">
+            <div class="sub-label">动态取色种子</div>
+            <div class="seed-chips" id="seedChips">
+              <button class="seed-chip" data-seed="indigo" style="--sc:#A8C7FF"></button>
+              <button class="seed-chip" data-seed="teal" style="--sc:#7EDBC4"></button>
+              <button class="seed-chip" data-seed="coral" style="--sc:#FFB59E"></button>
+              <button class="seed-chip" data-seed="violet" style="--sc:#D0A8FF"></button>
+              <button class="seed-chip" data-seed="slate" style="--sc:#B9C1D1"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-title">采样与电源</div>
+        <div class="card">
+          <div class="slider-block">
+            <div class="slider-head"><span>刷新间隔</span><output data-for="update_interval_ms">1.0 s</output></div>
+            <div class="slider-wrap"><input type="range" min="500" max="2000" step="100" data-key="update_interval_ms" data-type="i" data-unit="" data-display="sec"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>0.5 s · 更跟手</span><span>2.0 s · 更省电</span></div>
+          </div>
+          <div class="slider-block">
+            <div class="slider-head"><span>后台唤醒</span><output data-for="wake_interval_sec">15 s</output></div>
+            <div class="slider-wrap"><input type="range" min="0" max="300" step="5" data-key="wake_interval_sec" data-type="i" data-unit=" s"><div class="slider-tip"></div></div>
+            <div class="slider-scale"><span>0 = 关闭</span><span>300 s</span></div>
           </div>
         </div>
 
@@ -848,176 +935,10 @@ svg{display:block}
           </div>
           <p class="card-note">监视条是独立悬浮窗，横屏全屏场景不依赖下拉状态栏。GPU 数据需要 root；管理器未授权时其余指标照常工作。</p>
         </div>
-  <div class="payload-card">
-        <div class="payload-head">
-          <div><b>配置快照</b><small>perf → Settings.Global · nexusfloat_prefs</small></div>
-          <button class="text-btn" id="copyBtn"><span data-icon="copy"></span>复制命令</button>
-        </div>
-        <pre class="payload" id="payload"></pre>
-      </div>
-      </section>
-
-      <!-- ───────── 项目 ───────── -->
-      <section class="page" data-page="modules" hidden>
-        <div class="group-title">监视项目 <span class="count-pill" id="modCount">4 项启用</span></div>
-        <p class="group-hint">开关控制显示，↑↓ 调整监视条上的排列顺序；展开可改显示名称。</p>
-        <div class="card card-flush" id="moduleList"></div>
-
-        <div class="group-title">图表与频率</div>
-        <div class="card">
-          <div class="row">
-            <span class="row-icon" data-icon="bar"></span>
-            <div class="row-text"><b>CPU 占用柱状图</b><small>8 根竖条，跟着各核心占用波动</small></div>
-            <label class="switch"><input type="checkbox" data-key="cpu_bar" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <div class="row">
-            <span class="row-icon" data-icon="bar"></span>
-            <div class="row-text"><b>GPU 占用柱状图</b><small>单根竖条</small></div>
-            <label class="switch"><input type="checkbox" data-key="gpu_bar" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <div class="row">
-            <span class="row-icon" data-icon="cpu"></span>
-            <div class="row-text"><b>CPU 频率</b><small>括号内显示最低-最高频率</small></div>
-            <label class="switch"><input type="checkbox" data-key="mod_cpu_freq" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <div class="row">
-            <span class="row-icon" data-icon="gpu"></span>
-            <div class="row-text"><b>GPU 频率</b><small>括号内显示当前频率</small></div>
-            <label class="switch"><input type="checkbox" data-key="mod_gpu_freq" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- ───────── 外观 ───────── -->
-      <section class="page" data-page="appearance" hidden>
-        <div class="group-title">文字</div>
-        <div class="card">
-          <div class="slider-block">
-            <div class="slider-head"><span>字号</span><output data-for="font_size_sp">7 sp</output></div>
-            <div class="slider-wrap"><input type="range" min="5" max="20" step="1" data-key="font_size_sp" data-type="f" data-unit=" sp"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>5 sp</span><span>20 sp</span></div>
-          </div>
-          <div class="row">
-            <span class="row-icon" data-icon="bold"></span>
-            <div class="row-text"><b>字体加粗</b><small>系统等宽字体 + BOLD 字重样式</small></div>
-            <label class="switch"><input type="checkbox" data-key="font_bold" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <div class="sub-block">
-            <div class="sub-label">字体颜色 <span class="key-hint">text_color</span></div>
-            <div class="swatches" id="swatches">
-              <button class="swatch" data-value="0" style="--sw:#FFFFFF"><i></i><span>白</span></button>
-              <button class="swatch" data-value="1" style="--sw:#111111"><i></i><span>黑</span></button>
-              <button class="swatch" data-value="2" style="--sw:#6DB0FF"><i></i><span>蓝</span></button>
-              <button class="swatch" data-value="3" style="--sw:#34D399"><i></i><span>绿</span></button>
-              <button class="swatch" data-value="4" style="--sw:#FBBF24"><i></i><span>黄</span></button>
-              <button class="swatch" data-value="5" style="--sw:#F87171"><i></i><span>红</span></button>
-              <button class="swatch" data-value="6" style="--sw:#C084FC"><i></i><span>紫</span></button>
-              <button class="swatch" data-value="7" style="--sw:#22D3EE"><i></i><span>青</span></button>
-            </div>
-          </div>
-          <div class="row" id="contrastRow">
-            <span class="row-icon" data-icon="contrast"></span>
-            <div class="row-text"><b>自动反色</b><small>跟随状态栏图标明暗切深浅色</small></div>
-            <label class="switch"><input type="checkbox" data-key="auto_contrast" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <p class="card-note" id="contrastHint">开启后字体颜色由系统决定，色板不可用；与「显示背景」互斥。</p>
-        </div>
-
-        <div class="group-title">布局</div>
-        <div class="card">
-          <div class="slider-block">
-            <div class="slider-head"><span>项目间隔</span><output data-for="spacing_dp">8 dp</output></div>
-            <div class="slider-wrap"><input type="range" min="0" max="24" step="1" data-key="spacing_dp" data-type="f" data-unit=" dp"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>紧凑</span><span>疏松</span></div>
-          </div>
-          <div class="slider-block">
-            <div class="slider-head"><span>水平位置</span><output data-for="offset_x">0 px</output></div>
-            <div class="slider-wrap"><input type="range" min="-100" max="100" step="2" data-key="offset_x" data-type="i" data-unit=" px"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>左移</span><span>右移</span></div>
-          </div>
-          <div class="slider-block">
-            <div class="slider-head"><span>垂直位置</span><output data-for="offset_y">0 px</output></div>
-            <div class="slider-wrap"><input type="range" min="-100" max="100" step="2" data-key="offset_y" data-type="i" data-unit=" px"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>上移</span><span>下移</span></div>
-          </div>
-          <div class="card-actions"><button class="text-btn" data-action="resetOffset"><span data-icon="rotate"></span>复位位置</button></div>
-        </div>
-
-        <div class="group-title">背景</div>
-        <div class="card">
-          <div class="row">
-            <span class="row-icon" data-icon="square"></span>
-            <div class="row-text"><b>显示背景</b><small>半透明深灰圆角底；关闭则完全透明</small></div>
-            <label class="switch"><input type="checkbox" data-key="mod_background" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-          </div>
-          <p class="card-note">开启背景后自动反色会置灰——两者互斥，与现有 App 行为一致。</p>
-        </div>
-      </section>
-
-      <!-- ───────── 高级 ───────── -->
-      <section class="page" data-page="advanced" hidden>
-        <div class="group-title">采样与电源</div>
-        <div class="card">
-          <div class="slider-block">
-            <div class="slider-head"><span>刷新间隔</span><output data-for="update_interval_ms">1.0 s</output></div>
-            <div class="slider-wrap"><input type="range" min="500" max="2000" step="100" data-key="update_interval_ms" data-type="i" data-unit="" data-display="sec"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>0.5 s · 更跟手</span><span>2.0 s · 更省电</span></div>
-          </div>
-          <div class="slider-block">
-            <div class="slider-head"><span>后台唤醒</span><output data-for="wake_interval_sec">15 s</output></div>
-            <div class="slider-wrap"><input type="range" min="0" max="300" step="5" data-key="wake_interval_sec" data-type="i" data-unit=" s"><div class="slider-tip"></div></div>
-            <div class="slider-scale"><span>0 = 关闭</span><span>300 s</span></div>
-          </div>
-        </div>
-
-        <div class="group-title">FPS 来源 <span class="count-pill">按序回退</span></div>
-        <div class="card">
-          <div class="row"><span class="row-icon" data-icon="activity"></span><div class="row-text"><b>FPS 来源 · 高通预设</b><small>面板 measured_fps → TimeStats 兜底，按序回退</small></div></div>
-        </div>
-
-        <div class="group-title">取数与诊断</div>
-        <div class="card">
-          <div class="row"><span class="row-icon" data-icon="terminal"></span><div class="row-text"><b>SurfaceFlinger 走 root</b><small>sf_prefer_root</small></div><label class="switch"><input type="checkbox" data-key="sf_prefer_root" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-          <div class="row"><span class="row-icon" data-icon="bug"></span><div class="row-text"><b>FPS 诊断</b><small>数值后显示来源字母</small></div><label class="switch"><input type="checkbox" data-key="fps_debug" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>
-        </div>
-
-        <div class="group-title">本界面外观 <span class="count-pill">不影响 HUD</span></div>
-        <div class="card">
-          <div class="preset-block">
-            <div class="sub-label">主题模式</div>
-            <div class="segmented" id="themeSeg">
-              <button class="seg active" data-mode="auto">跟随系统</button>
-              <button class="seg" data-mode="light">浅色</button>
-              <button class="seg" data-mode="dark">深色</button>
-            </div>
-          </div>
-          <div class="sub-block">
-            <div class="sub-label">动态取色种子</div>
-            <div class="seed-chips" id="seedChips">
-              <button class="seed-chip" data-seed="indigo" style="--sc:#A8C7FF"></button>
-              <button class="seed-chip" data-seed="teal" style="--sc:#7EDBC4"></button>
-              <button class="seed-chip" data-seed="coral" style="--sc:#FFB59E"></button>
-              <button class="seed-chip" data-seed="violet" style="--sc:#D0A8FF"></button>
-              <button class="seed-chip" data-seed="slate" style="--sc:#B9C1D1"></button>
-            </div>
-          </div>
-        </div>
-
-        <div class="about">
-          <div><b>FusionStrip · WebUI 设计稿</b><span>LSPosed 模块 · GPLv3</span></div>
-          <p>本页为独立设计原型。字段与 <code>Constants.java</code> / <code>NexusBridge.java</code> 一一对齐，接入 WebView 时替换 <code>NFBridge</code> 即可复用全部交互。</p>
-        </div>
       </section>
 
     </div><!-- /scroll -->
 
-    <nav class="navbar" id="navbar">
-      <button class="nav-item active" data-tab="status"><span class="nav-ind"><span data-icon="home"></span></span><small>状态</small></button>
-      <button class="nav-item" data-tab="modules"><span class="nav-ind"><span data-icon="list"></span></span><small>项目</small></button>
-      <button class="nav-item" data-tab="appearance"><span class="nav-ind"><span data-icon="palette"></span></span><small>外观</small></button>
-      <button class="nav-item" data-tab="advanced"><span class="nav-ind"><span data-icon="sliders"></span></span><small>高级</small></button>
-    </nav>
   </section>
 
 
@@ -1055,50 +976,19 @@ svg{display:block}
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ───────────────────────── 1. 图标（Lucide 线性，24 视口） ───────────────────────── */
+/* 2026-11-18 清理：只保留 data-icon 实际引用的图标。
+   MODULES 里的 icon 字段仅作元数据保留（卡片网格版已不渲染图标），
+   若日后恢复图标渲染，需从 fix/8elite-cpu 历史版本找回对应 path。 */
 const P = {
   activity:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
-  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
-  palette:'<circle cx="13.5" cy="6.5" r=".8" fill="currentColor" stroke="none"/><circle cx="17.5" cy="10.5" r=".8" fill="currentColor" stroke="none"/><circle cx="8.5" cy="7.5" r=".8" fill="currentColor" stroke="none"/><circle cx="6.5" cy="12.5" r=".8" fill="currentColor" stroke="none"/><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.6-1.4-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h1.6A5.5 5.5 0 0 0 22 9.8C22 5.5 17.5 2 12 2Z"/>',
   rotate:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
-  tag:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/>',
-  cpu:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/>',
-  gpu:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M8 20h8M7 12h3m4 0h3"/>',
-  memory:'<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10v4M10 10v4M14 10v4M18 10v4M6 18v2M18 18v2"/>',
-  layers:'<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5M2 17l10 5 10-5"/>',
-  thermometer:'<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0Z"/>',
-  zap:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
-  pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
-  gauge:'<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
-  cputemp:'<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M12 9v4M12 16h.01M9 2v3M15 2v3"/>',
-  wifi:'<path d="M2 8.8a16 16 0 0 1 20 0M5 12.8a11 11 0 0 1 14 0M8.5 16.8a6 6 0 0 1 7 0"/><path d="M12 21h.01" stroke-width="3"/>',
-  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  smartphone:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/>',
-  landscape:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M8 19h8"/>',
-  battery:'<rect x="1" y="6" width="20" height="12" rx="3"/><path d="M23 10v4"/><rect x="4" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/>',
   filter:'<path d="M3 5h18l-7 8v6l-4 2v-8L3 5Z"/>',
   refresh:'<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>',
-  bar:'<path d="M4 19V11M9 19V5M14 19v-9M19 19V8"/>',
   bold:'<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7Zm0 7h7a3.5 3.5 0 0 1 0 7H7Z"/>',
   contrast:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18" fill="currentColor" stroke="none" opacity=".55"/>',
   square:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/>',
-  terminal:'<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m6 9 3 3-3 3M12 15h5"/>',
-  bug:'<rect x="8" y="6" width="8" height="14" rx="4"/><path d="M8 11H4m16 0h-4M8 16H4m16 0h-4M9 6 7 3m8 3 2-3"/>',
-  chart:'<path d="M3 3v18h18"/><path d="m7 15 4-5 3 3 5-7"/>',
-  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 9h18c0-1-3-2-3-9Z"/><path d="M10 21h4"/>',
-  home:'<path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 21v-7h6v7"/>',
   list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
-  sliders:'<path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h9m4 0h3"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/>',
-  check:'<path d="m4 12 5 5L20 6"/>',
-  chevron:'<path d="m6 9 6 6 6-6"/>',
-  arrowUp:'<path d="m6 15 6-6 6 6"/>',
-  arrowDown:'<path d="m6 9 6 6 6-6"/>',
-  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
-  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
-  pause:'<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none"/>',
-  play:'<path d="m7 4 13 8-13 8V4Z" fill="currentColor" stroke="none"/>',
-  gamepad:'<path d="M6 12h4m-2-2v4"/><circle cx="16" cy="11" r=".8" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r=".8" fill="currentColor" stroke="none"/><path d="M17.3 5H6.7A4.7 4.7 0 0 0 2 9.7c0 2 1.1 3.4 2.5 4.6.9.8 1.3 1.3 1.5 2.3l.4 1.8A2.4 2.4 0 0 0 8.8 20h6.4a2.4 2.4 0 0 0 2.4-2.4l.4-1.8c.2-1 .6-1.5 1.5-2.3A5.9 5.9 0 0 0 22 9.7 4.7 4.7 0 0 0 17.3 5Z"/>',
-  shield:'<path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5Z"/><path d="m9 12 2 2 4-4"/>',
 };
 function svg(name, size){
   const d = P[name] || P.square;
@@ -1127,8 +1017,8 @@ const DEFAULTS = {
   name_mod_cpu:'C', name_mod_gpu:'G', name_mod_ram:'R', name_mod_zram:'Z',
   name_mod_temp:'T', name_mod_power:'P', name_mod_current:'I', name_mod_fps:'F',
   name_mod_cpu_temp:'CT', name_mod_net:'N',
-  // 顺序与空格
-  module_order:'0,2,4,6,7,8,9,10,11,12,13', space_before:'',
+  // 顺序与空格（ZRAM 已从界面移除，键保留对齐 Constants.java）
+  module_order:'0,2,4,6,8,9,10,11,12,13', space_before:'',
   // 外观
   cpu_bar:true, gpu_bar:true, mod_background:false, auto_contrast:false,
   text_color:0, font_size_sp:7, font_bold:true, spacing_dp:8,
@@ -1150,17 +1040,16 @@ const TEXT_COLORS = ['#FFFFFF','#111111','#6DB0FF','#34D399','#FBBF24','#F87171'
 const TEXT_COLOR_NAMES = ['白','黑','蓝','绿','黄','红','紫','青'];
 
 const MODULES = [
-  {idx:0,  key:'mod_clock',    label:'时间',     icon:'clock'},
-  {idx:2,  key:'mod_cpu',      label:'CPU',      icon:'cpu',         nameKey:'name_mod_cpu'},
-  {idx:4,  key:'mod_gpu',      label:'GPU',      icon:'gpu',         nameKey:'name_mod_gpu'},
-  {idx:6,  key:'mod_ram',      label:'RAM',      icon:'memory',      nameKey:'name_mod_ram'},
-  {idx:7,  key:'mod_zram',     label:'ZRAM',     icon:'layers',      nameKey:'name_mod_zram'},
-  {idx:8,  key:'mod_temp',     label:'温度',     icon:'thermometer', nameKey:'name_mod_temp'},
-  {idx:9,  key:'mod_power',    label:'功率',     icon:'zap',         nameKey:'name_mod_power'},
-  {idx:10, key:'mod_current',  label:'电流',     icon:'pulse',       nameKey:'name_mod_current'},
-  {idx:11, key:'mod_fps',      label:'FPS',      icon:'gauge',       nameKey:'name_mod_fps'},
-  {idx:12, key:'mod_cpu_temp', label:'CPU温度',  icon:'cputemp',     nameKey:'name_mod_cpu_temp'},
-  {idx:13, key:'mod_net',      label:'网速',     icon:'wifi',        nameKey:'name_mod_net'},
+  {idx:0,  key:'mod_clock',    label:'时间',     sub:'时钟',        icon:'clock',       chips:[['24 小时制','mod_clock_24h']]},
+  {idx:2,  key:'mod_cpu',      label:'CPU',      sub:'占用率',      icon:'cpu',         nameKey:'name_mod_cpu',      chips:[['频率','mod_cpu_freq'],['柱状图','cpu_bar']]},
+  {idx:4,  key:'mod_gpu',      label:'GPU',      sub:'占用率',      icon:'gpu',         nameKey:'name_mod_gpu',      chips:[['频率','mod_gpu_freq'],['柱状图','gpu_bar']]},
+  {idx:6,  key:'mod_ram',      label:'RAM',      sub:'占用',        icon:'memory',      nameKey:'name_mod_ram'},
+  {idx:8,  key:'mod_temp',     label:'温度',     sub:'电池温度',    icon:'thermometer', nameKey:'name_mod_temp'},
+  {idx:9,  key:'mod_power',    label:'功率',     sub:'充放电',      icon:'zap',         nameKey:'name_mod_power'},
+  {idx:10, key:'mod_current',  label:'电流',     sub:'充放电',      icon:'pulse',       nameKey:'name_mod_current'},
+  {idx:11, key:'mod_fps',      label:'FPS',      sub:'帧率',        icon:'gauge',       nameKey:'name_mod_fps'},
+  {idx:12, key:'mod_cpu_temp', label:'CPU温度',  sub:'thermal_zone', icon:'cputemp',    nameKey:'name_mod_cpu_temp'},
+  {idx:13, key:'mod_net',      label:'网速',     sub:'收发',        icon:'wifi',        nameKey:'name_mod_net'},
 ];
 const byKey = k => MODULES.find(m=>m.key===k);
 
@@ -1168,8 +1057,8 @@ const byKey = k => MODULES.find(m=>m.key===k);
 const LS_KEY = 'nexusfloat.webui.design.v1';
 let state = {...DEFAULTS};
 let baseline = {...DEFAULTS};
-const ui = {tab:'status', orient:'portrait', playing:true, seed:'indigo', mode:'auto',
-            cond:{charge:true, screen:true, app:true}};
+/* orient/playing/cond 为早期预览舞台遗留，已无消费方（2026-11-18 清理） */
+const ui = {tab:'modules', seed:'indigo', mode:'auto'};
 
 const hasNative = () => (typeof window.NF !== 'undefined' && window.NF) ? window.NF : null;
 
@@ -1272,7 +1161,7 @@ function snapshotLines(){
   });
 }
 function snapshotText(){ return snapshotLines().join('\n') + '\n'; }
-function shellCommand(){ return `settings put global nexusfloat_prefs '${NFBridge.toBase64(snapshotText())}'`; }
+/* shellCommand() 已随配置快照卡移除（2026-11-18）：copyBtn 是唯一调用方 */
 
 /* ───────────────────────── 4. 主题 / 动态取色 ───────────────────────── */
 const SEEDS = {
@@ -1376,20 +1265,21 @@ function syncInputs(){
                             : '开启后字体颜色由系统决定，色板不可用；与「显示背景」互斥。');
   document.getElementById('whitelistWrap').hidden = !state.app_filter;
 
-  // 主题段
-  document.querySelectorAll('#themeSeg .seg').forEach(b=>b.classList.toggle('active',
-    ({auto:0,light:1,dark:2})[b.dataset.mode] === state.app_theme));
+  // 动态取色种子高亮（主题段 themeSeg 已随高级页移除）
   document.querySelectorAll('#seedChips .seed-chip').forEach(b=>b.classList.toggle('active', b.dataset.seed === ui.seed));
 
   // 状态卡
-  document.getElementById('statInterval').textContent = (state.update_interval_ms/1000).toFixed(1)+' s';
+  // 状态卡元素已随状态页移除（保留空值保护）
+  const statIntervalEl = document.getElementById('statInterval');
+  if(statIntervalEl) statIntervalEl.textContent = (state.update_interval_ms/1000).toFixed(1)+' s';
   const enabled = MODULES.filter(m=>state[m.key]).length;
-  document.getElementById('statModules').textContent = enabled+' / 11';
+  const statModulesEl = document.getElementById('statModules');
+  if(statModulesEl) statModulesEl.textContent = enabled+' / '+MODULES.length;
   document.getElementById('modCount').textContent = enabled+' 项启用';
 
   // 快照
   const payload = document.getElementById('payload');
-  payload.innerHTML = snapshotLines().map(l=>{
+  if(payload) payload.innerHTML = snapshotLines().map(l=>{
     const i = l.indexOf('=');
     return `<span class="k">${esc(l.slice(0,i))}</span>=<span class="v">${esc(l.slice(i+1))}</span>`;
   }).join('\n');
@@ -1402,43 +1292,84 @@ function onStateChange(){
 
 /* ───────────────────────── 6. 监视项目列表 ───────────────────────── */
 function orderArr(){ const order = state.module_order || DEFAULTS.module_order; return order.split(',').map(Number).filter(n=>MODULES.some(m=>m.idx===n)); }
-function parseSpaces(str){
-  const map = {};
-  String(str||'').split(/[,，]/).forEach(part=>{
-    const m = part.trim().match(/^(.+?)\s*([0-9])$/);
-    if(!m) return;
-    const mod = MODULES.find(x=>x.label.toLowerCase()===m[1].toLowerCase() || x.key.toLowerCase()===m[1].toLowerCase());
-    if(mod) map[mod.key] = Math.min(9,Math.max(0,+m[2]));
-  });
-  return map;
-}
+/* parseSpaces() 已删除：空格挤位（space_before）界面无入口，且该键在 REMOVED_KEYS 清单里 */
 
 function renderModules(){
   const box = document.getElementById('moduleList');
   const arr = orderArr();
-  box.innerHTML = arr.map((idx)=>{
+  // 卡片网格版（2026-11-18）：参照旧版项目页设计稿，并排 3 列；
+  // 徽标即开关，↑↓ 调序；CPU/GPU 频率·柱状图与时间 24h 制改为卡内快捷片
+  box.innerHTML = arr.map((idx,i)=>{
     const m = MODULES.find(x=>x.idx===idx);
     const on = !!state[m.key];
-    // lull.20：次选面板移除——mod_cpu_freq/mod_gpu_freq 与外观页「图表与频率」重复；
-    // 24 小时制拍平为时间行下方的一行
-    const subRow = m.key === 'mod_clock'
-      ? '<div class="mod-sub-row"><div class="row-text"><b>24 小时制</b><small>横条时钟的时间格式</small></div><label class="switch"><input type="checkbox" data-key="mod_clock_24h" data-type="b"><span class="track"><span class="thumb"></span></span></label></div>'
-      : '';
-    return `<div class="mod-item ${on?'on':''}" data-mod="${m.key}">
-      <div class="mod-main">
-        <span class="mod-icon">${svg(m.icon)}</span>
-        <div class="mod-info">
-          <b>${m.label}</b><small>${m.key}</small>
-        </div>
-        <div class="mod-tools">
-          <label class="switch"><input type="checkbox" data-key="${m.key}" data-type="b"><span class="track"><span class="thumb"></span></span></label>
-        </div>
+    const chips = (m.chips||[]).map(([lb,ck])=>
+      `<button class="mod-chip ${state[ck]?'active':''}" data-chip="${ck}">${lb}</button>`).join('');
+    return `<div class="mod-card ${on?'on':''}" data-mod="${m.key}">
+      <div class="mod-head">
+        <span class="mod-name">${m.label}</span>
+        <button class="mod-badge" data-toggle="${m.key}">${on?'开':'关'}</button>
       </div>
-      ${subRow}
+      <div class="mod-sub">${m.sub}</div>
+      <div class="mod-foot">
+        ${chips}
+        <span class="mod-arrows">
+          <button class="mod-arrow" data-move="-1" data-at="${i}" title="上移" ${i===0?'disabled':''}>−</button>
+          <button class="mod-arrow" data-move="1" data-at="${i}" title="下移" ${i===arr.length-1?'disabled':''}>＋</button>
+        </span>
+      </div>
     </div>`;
   }).join('');
-  bindInputs(box);
+  box.onclick = e=>{
+    const t = e.target.closest('[data-toggle]');
+    if(t){ setKey(t.dataset.toggle, !state[t.dataset.toggle]); renderModules(); return; }
+    const chip = e.target.closest('.mod-chip');
+    if(chip){ setKey(chip.dataset.chip, !state[chip.dataset.chip]); renderModules(); return; }
+    const mv = e.target.closest('.mod-arrow');
+    if(mv && !mv.disabled){
+      const i = +mv.dataset.at, j = i + +mv.dataset.move;
+      if(j < 0 || j >= arr.length) return;
+      const order = arr.slice();
+      [order[i], order[j]] = [order[j], order[i]];
+      setKey('module_order', order.join(','));
+      renderModules();
+    }
+  };
   syncInputs();
+}
+
+/* ───────────────── 6-b. 布局步进器（2026-11-18：字号并入布局，滑杆改 −/＋ 小卡） ───────────────── */
+const STEPPERS = [
+  {key:'font_size_sp', label:'字号',     min:5,    max:20,  step:1, unit:' sp'},
+  {key:'spacing_dp',   label:'项目间隔', min:0,    max:24,  step:1, unit:' dp'},
+  {key:'offset_x',     label:'水平偏移', min:-100, max:100, step:2, unit:' px'},
+  {key:'offset_y',     label:'垂直偏移', min:-100, max:100, step:2, unit:' px'},
+];
+function renderSteppers(){
+  const box = document.getElementById('stepperGrid');
+  if(!box) return;
+  box.innerHTML = STEPPERS.map(s=>`
+    <div class="stepper" data-skey="${s.key}">
+      <div class="stepper-head"><span>${s.label}</span><b class="stepper-val"></b></div>
+      <div class="stepper-btns">
+        <button class="st-btn" data-dir="-1" title="减小">−</button>
+        <button class="st-btn" data-dir="1" title="增大">＋</button>
+      </div>
+    </div>`).join('');
+  box.onclick = e=>{
+    const btn = e.target.closest('.st-btn');
+    if(!btn) return;
+    const s = STEPPERS.find(x=>x.key === btn.closest('.stepper').dataset.skey);
+    const v = Math.min(s.max, Math.max(s.min, state[s.key] + s.step * +btn.dataset.dir));
+    if(v !== state[s.key]) setKey(s.key, v);
+    syncSteppers();
+  };
+  syncSteppers();
+}
+function syncSteppers(){
+  document.querySelectorAll('.stepper[data-skey]').forEach(el=>{
+    const s = STEPPERS.find(x=>x.key === el.dataset.skey);
+    if(s) el.querySelector('.stepper-val').textContent = state[s.key] + s.unit;
+  });
 }
 
 /* 7. HUD 实时渲染（lull.18 随预览舞台移除） */
@@ -1487,53 +1418,19 @@ window.NFRestartResult = function(r){
 };
 
 function switchTab(tab){
+  /* 状态页已移除（2026-11-18）：老用户 localStorage 里可能还存着 status，
+     不兜底会出现「所有页都 hidden」的空白屏 */
+  const names = {modules:'项目与外观'};
+  if(!names[tab]) tab = 'modules';
   ui.tab = tab; persist();
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
-  const names = {status:'控制台',modules:'监视项目',appearance:'外观与校正',advanced:'高级设置'};
   document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.20';
   document.getElementById('scroll').scrollTop = 0;
 }
-/* ───────────────── 真实 GPU 读数（仅 App WebView 内） ───────────────── */
-function startGpuPolling(){
-  const first = NFBridge.gpuInfo();
-  if(!first) return;                       // 浏览器预览：保留原来的静态文案
-  const freqEl = document.getElementById('statGpu');
-  const subEl  = document.getElementById('statusSub');
-  const apply = g=>{
-    if(!g) return;
-    if(freqEl) freqEl.textContent =
-      (g.freqMhz > 0 ? g.freqMhz + ' MHz' : 'N/A') + ' · ' +
-      (g.usagePercent >= 0 ? g.usagePercent + ' %' : 'N/A');
-    if(subEl) subEl.textContent = g.source || '设置通道已连接';
-  };
-  apply(first);
-  setInterval(()=>apply(NFBridge.gpuInfo()), 1000);
-}
-
-/* ───────────── 设置通道诊断（只在 App WebView 内有值） ───────────── */
-function startDiagPolling(){
-  const el = document.getElementById('bridgeDiag');
-  if(!el) return;
-  const render = d=>{
-    if(!d){ el.innerHTML = '浏览器预览 · 未连接设备设置通道'; return; }
-    const flag = v => v ? '✓' : '✗';
-    const ago = d.lastPublishAt
-      ? Math.max(0, Math.round((Date.now() - d.lastPublishAt)/1000)) + ' 秒前'
-      : '尚未发布';
-    // 空名称键：旧版全量写回的脏数据，不为 0 时 HUD 不画图标
-    const bad = d.emptyNames > 0
-      ? ` · <b style="color:var(--md-sys-color-error)">脏名称键 ${d.emptyNames}</b>`
-      : '';
-    el.innerHTML =
-      `本地表 <b>${d.localKeys}</b> 键${bad} · Remote <b>${flag(d.remote)}</b> · ` +
-      `Root <b>${flag(d.root)}</b> · Global 快照 <b>${d.globalChars}</b> 字符<br>` +
-      `上次整表发布 <b>${d.lastPublishOk ? '成功' : '未成功'}</b>（${ago}）` +
-      (d.lastPublishOk ? '' : ' · 改动不生效时优先检查 root 授权');
-  };
-  render(NFBridge.diag());
-  setInterval(()=>render(NFBridge.diag()), 2000);
-}
+/* GPU 读数 / 设置通道诊断轮询已随状态页移除（2026-11-18）：
+   原 startGpuPolling()/startDiagPolling() 每秒空转调用 NFBridge.gpuInfo()/diag()，
+   结果无处显示，直接删除。 */
 
 /* ───────────────── 应用白名单选择器 ───────────────── */
 let appPickerData = [];
@@ -1635,17 +1532,17 @@ function init(){
   mountIcons();
   resolveTheme();
   renderModules();
+  renderSteppers();
   bindInputs();
   syncInputs();
-  startGpuPolling();
-  startDiagPolling();
   bindAppPicker();
 
-  // 导航
-  document.getElementById('navbar').addEventListener('click',e=>{
+  // 导航（高级页已移除，单页结构，navbar 不存在）
+  const navEl = document.getElementById('navbar');
+  if(navEl) navEl.addEventListener('click',e=>{
     const b = e.target.closest('[data-tab]'); if(b) switchTab(b.dataset.tab);
   });
-  switchTab(ui.tab || 'status');
+  switchTab(ui.tab || 'modules');
   document.getElementById('scroll').addEventListener('scroll',e=>{
     document.getElementById('topbar').classList.toggle('scrolled', e.target.scrollTop > 12);
   },{passive:true});
@@ -1655,12 +1552,6 @@ function init(){
     const dark = document.documentElement.dataset.theme === 'dark';
     ui.mode = dark ? 'light' : 'dark';
     setKey('app_theme', dark ? 1 : 2);
-    resolveTheme(); syncInputs();
-  });
-  document.getElementById('themeSeg').addEventListener('click',e=>{
-    const b = e.target.closest('[data-mode]'); if(!b) return;
-    ui.mode = b.dataset.mode;
-    setKey('app_theme', ({auto:0,light:1,dark:2})[ui.mode]);
     resolveTheme(); syncInputs();
   });
   document.getElementById('seedChips').addEventListener('click',e=>{
@@ -1684,7 +1575,7 @@ function init(){
     const b = e.target.closest('[data-action]'); if(!b) return;
     const a = b.dataset.action;
     if(a === 'reset'){
-      state = {...DEFAULTS}; onStateChange(); renderModules();
+      state = {...DEFAULTS}; onStateChange(); renderModules(); syncSteppers();
       toast('已恢复默认设置');
     }
     if(a === 'resetOffset'){
@@ -1698,14 +1589,7 @@ function init(){
 
   // 应用 / 复制 / dialog
   // 应用流程已移除（lull.20）：开关即改即生效，桥接层每次变更自动 commit+防抖 publish
-  document.getElementById('copyBtn').addEventListener('click',async()=>{
-    try{ await navigator.clipboard.writeText(shellCommand()); toast('已复制 settings 命令'); }
-    catch(err){
-      const ta = document.createElement('textarea');
-      ta.value = shellCommand(); document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); ta.remove(); toast('已复制 settings 命令');
-    }
-  });
+  // 配置快照卡已随高级页移除（2026-11-18），copyBtn 绑定一并去掉
 }
 
 document.addEventListener('DOMContentLoaded', init);
