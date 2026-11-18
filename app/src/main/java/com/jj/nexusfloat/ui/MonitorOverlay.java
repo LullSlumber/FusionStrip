@@ -469,7 +469,11 @@ public final class MonitorOverlay {
         }
         String foreground = foregroundTracker.getForegroundPackage();
         if (foreground == null) {
-            return true;
+            // 读不到前台包名（应用切换瞬间 / getRunningTasks 失败 / 退避窗口）时
+            // 按「不在白名单」处理。旧版这里直接放行，未勾选的应用会随机冒出
+            // HUD（用户实测「没勾选的游戏有时候也有」的主因）；WebUI 的承诺是
+            // 「白名单外一律隐藏监视条」，以它为准（lull.25）。
+            return false;
         }
         return whitelist.contains(foreground);
     }

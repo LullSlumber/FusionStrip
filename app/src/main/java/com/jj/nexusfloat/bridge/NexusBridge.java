@@ -395,7 +395,9 @@ public final class NexusBridge {
             return Collections.emptySet();
         }
         Set<String> result = new HashSet<>();
-        for (String pkg : raw.split("[\\n ]+")) {
+        // 逗号也当分隔符：WebUI 解析端（[\n,\s]+）认逗号，读侧此前只认换行+空格，
+        // 手填 "pkgA,pkgB" 会被整串当成一个包名，勾选的游戏反而不显示（lull.25 对齐）
+        for (String pkg : raw.split("[\\n ,]+")) {
             String trimmed = pkg.trim();
             if (!trimmed.isEmpty()) {
                 result.add(trimmed);

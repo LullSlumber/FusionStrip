@@ -34,23 +34,33 @@ public final class ForegroundAppTracker {
 
     private String cachedPackage;
     private long cachedAt;
-    /** 连续失败到这个次数就不试了，省得每秒都打日志 */
+    /** 连续失败到这个次数就进入退避，省得每秒都打日志 */
     private int failures;
     private static final int MAX_FAILURES = 5;
+    /** 退避期间的重试间隔：到期再试一次，成功即清零。旧版达到阈值后永久短路
+        返回 null 且成功路径永远走不到——白名单会被静默忽略到 SystemUI 重启，
+        lull.25 改为可恢复退避 */
+    private static final long BACKOFF_MS = 30000L;
+    private long lastAttemptAt;
 
     public ForegroundAppTracker(Context context) {
         this.activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
     }
 
-    /** 返回前台包名；读不到就给 null，调用方按「不过滤」处理 */
+    /** 返回前台包名；读不到（切换瞬间 / getRunningTasks 失败 / 退避窗口）给 null，
+        调用方自行决定语义：白名单判定按「不在白名单」＝ 隐藏，FPS 归因按无前台 */
     public String getForegroundPackage() {
         long now = SystemClock.uptimeMillis();
         if (cachedPackage != null && now - cachedAt < CACHE_TTL_MS) {
             return cachedPackage;
         }
-        if (activityManager == null || failures >= MAX_FAILURES) {
+        if (activityManager == null) {
             return null;
         }
+        if (failures >= MAX_FAILURES && now - lastAttemptAt < BACKOFF_MS) {
+            return null;   // 退避窗口内不重复跨进程调，到期再试，成功即恢复
+        }
+        lastAttemptAt = now;
 
         try {
             List<ActivityManager.RunningTaskInfo> tasks = activityManager.getRunningTasks(1);
