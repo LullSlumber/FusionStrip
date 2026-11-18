@@ -57,6 +57,10 @@ public final class NexusBridge {
     /** lull.26：bindModule 时 Remote 里有没有数据（少数 ROM 模块进程也被注入才有） */
     private static volatile boolean remoteReady;
 
+    public static boolean isRemoteReady() {
+        return remoteReady;
+    }
+
     /** 任意设置通道就绪。都不就绪 ＝ 还没读到过任何用户设置，shouldShowNow 先不显示，
         避免启动窗口期按默认值（app_filter＝false＝不过滤）把白名单用户暴露在未勾选应用里 */
     public static boolean isSettingsReady() {
