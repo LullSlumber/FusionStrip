@@ -40,9 +40,9 @@ jobs:
             -dname "CN=FusionStrip CI"
           cat > keystore.properties <<'EOF'
           storeFile=../keystore/ci-release.jks
-          storePassword=nexusfloat-ci
+          storePassword=fusionstrip-ci
           keyAlias=ci
-          keyPassword=nexusfloat-ci
+          keyPassword=fusionstrip-ci
           EOF
 
       - name: Build release APK
