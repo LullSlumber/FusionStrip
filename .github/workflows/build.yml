@@ -37,7 +37,7 @@ jobs:
             -keystore keystore/ci-release.jks \
             -storepass nexusfloat-ci -keypass nexusfloat-ci \
             -alias ci -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=NexusFloat CI"
+            -dname "CN=FusionStrip CI"
           cat > keystore.properties <<'EOF'
           storeFile=../keystore/ci-release.jks
           storePassword=nexusfloat-ci
@@ -52,13 +52,13 @@ jobs:
       - name: Rename APK
         run: |
           VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
-          cp app/build/outputs/apk/release/app-release.apk "NexusFloat-${VERSION}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "FusionStrip-${VERSION}.apk"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NexusFloat-APK
-          path: NexusFloat-*.apk
+          name: FusionStrip-APK
+          path: FusionStrip-*.apk
 
       # 同步挂到 ci-build 这个滚动 release 上，方便直接用直链下载最新包
       - name: Attach to rolling release
@@ -66,7 +66,7 @@ jobs:
         with:
           tag_name: ci-build
           name: CI Build
-          files: NexusFloat-*.apk
+          files: FusionStrip-*.apk
           overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

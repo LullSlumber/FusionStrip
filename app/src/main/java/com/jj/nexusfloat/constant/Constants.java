@@ -747,7 +747,14 @@ public final class Constants {
     /** 作用域相关包名 */
     public static final class Package {
         public static final String SYSTEM_UI = "com.android.systemui";
-        public static final String MODULE = "com.jj.nexusfloat";
+        /**
+         * 模块自身 applicationId（2026-11-18 起 com.lullslumber.fusionstrip）。
+         * 它同时是「进程身份」判据（ModuleMain 对比真实 packageName）和
+         * 内部 authority/action 的前缀，必须与 build.gradle.kts 的
+         * applicationId 及 AndroidManifest 里的 authority/action 同步改。
+         * 注意 namespace / Java 包结构仍是 com.jj.nexusfloat，刻意不动。
+         */
+        public static final String MODULE = "com.lullslumber.fusionstrip";
 
         private Package() {}
     }

@@ -23,11 +23,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.jj.nexusfloat"
+        applicationId = "com.lullslumber.fusionstrip"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1090422
-        versionName = "1.9.4-lull.22"
+        versionCode = 1090423
+        versionName = "1.9.4-lull.23"
     }
 
     signingConfigs {

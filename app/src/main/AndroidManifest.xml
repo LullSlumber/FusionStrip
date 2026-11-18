@@ -101,7 +101,7 @@
 
         <provider
             android:name=".service.EarlyInitProvider"
-            android:authorities="com.jj.nexusfloat.earlyinit"
+            android:authorities="com.lullslumber.fusionstrip.earlyinit"
             android:directBootAware="true"
             android:exported="true" />
 
@@ -140,7 +140,7 @@
             android:enabled="true"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.jj.nexusfloat.action.WAKE_COLLECTOR" />
+                <action android:name="com.lullslumber.fusionstrip.action.WAKE_COLLECTOR" />
             </intent-filter>
         </receiver>
 

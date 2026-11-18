@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "NexusFloat"
+rootProject.name = "FusionStrip"
 include(":app")
