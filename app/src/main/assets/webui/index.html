@@ -437,25 +437,30 @@ svg{display:block}
   background:var(--md-sys-color-surface-container);
   border-radius:12px;
   padding:9px 10px 8px;display:flex;flex-direction:column;gap:4px;min-width:0;
-  transition:background .2s;
+  transition:background .2s;cursor:pointer;
 }
+/* 2026-11-18 点击手感修复：整卡可点 + 按压反馈 */
+.mod-card:active{background:var(--md-sys-color-surface-container-highest)}
+.mod-card.on:active{background:color-mix(in srgb,var(--md-sys-color-primary) 72%,var(--md-sys-color-primary-container))}
 .mod-card.on{background:var(--md-sys-color-primary-container)}
 .mod-head{display:flex;align-items:center;gap:4px}
 .mod-name{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:var(--md-sys-color-on-surface);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mod-card.on .mod-name{color:var(--md-sys-color-on-primary-container)}
-.mod-badge{flex:none;font-size:9px;font-weight:700;line-height:1;padding:3px 6px;border-radius:7px;border:0;cursor:pointer;
+/* 2026-11-18：徽标降级为纯状态指示器（整卡可点后不再单独绑事件） */
+.mod-badge{flex:none;font-size:9px;font-weight:700;line-height:1;padding:3px 7px;border-radius:7px;
   background:var(--md-sys-color-surface-container-high);color:var(--md-sys-color-on-surface-variant)}
 .mod-card.on .mod-badge{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)}
 .mod-sub{font-size:9.5px;color:var(--md-sys-color-on-surface-variant);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mod-card.on .mod-sub{color:var(--md-sys-color-on-primary-container);opacity:.7}
-.mod-foot{display:flex;align-items:center;gap:4px;margin-top:2px;min-height:20px}
+.mod-foot{display:flex;align-items:center;gap:4px;margin-top:2px;min-height:26px}
 .mod-chip{border:1px solid transparent;background:var(--md-sys-color-surface-container-high);border-radius:7px;
-  font-size:9.5px;padding:2.5px 7px;color:var(--md-sys-color-on-surface-variant);cursor:pointer;white-space:nowrap}
+  font-size:9.5px;padding:4px 9px;color:var(--md-sys-color-on-surface-variant);cursor:pointer;white-space:nowrap}
 .mod-chip.active{background:var(--md-sys-color-secondary-container);color:var(--md-sys-color-on-surface);font-weight:600}
+.mod-chip:active,.mod-arrow:active{filter:brightness(1.18)}
 .mod-arrows{display:flex;gap:3px;margin-left:auto}
-.mod-arrow{min-width:26px;height:22px;border-radius:7px;border:0;cursor:pointer;
+.mod-arrow{min-width:30px;height:26px;border-radius:7px;border:0;cursor:pointer;
   background:var(--md-sys-color-surface-container-high);
   color:var(--md-sys-color-on-surface-variant);
   display:grid;place-items:center;font-size:11px;font-weight:600;line-height:1;padding:0 7px}
@@ -831,7 +836,7 @@ svg{display:block}
       <div class="brand-mark" data-icon="activity"></div>
       <div class="topbar-titles">
         <b>FusionStrip</b>
-        <span id="topbarSub">项目与外观 · 1.9.4-lull.20</span>
+        <span id="topbarSub">项目与外观 · 1.9.4-lull.22</span>
       </div>
       <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
       <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
@@ -864,7 +869,7 @@ svg{display:block}
         </div>
 
         <div class="group-title">监视项目 <span class="count-pill" id="modCount">4 项启用</span></div>
-        <p class="group-hint">点击「开 / 关」切换显示，− ＋ 调整监视条上的排列顺序；CPU / GPU 卡内快捷片控制频率与柱状图。</p>
+        <p class="group-hint">点击卡片切换显示，− ＋ 调整监视条上的排列顺序；CPU / GPU 卡内快捷片控制频率与柱状图。</p>
         <div class="mod-grid" id="moduleList"></div>
 
         <div class="group-title">布局</div>
@@ -1287,7 +1292,12 @@ function syncInputs(){
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function onStateChange(){
-  persist(); baseline = {...state}; syncInputs();
+  /* 乐观更新（2026-11-18 点击手感修复）：先渲染再提交。真机上 nf.commit()
+     在 WebView 的 JS 线程里同步走「本地落盘 + RemotePreferences binder IPC」，
+     会把页面堵住几百毫秒——提交挪到下一帧异步执行，点击立即翻面。
+     commit 失败时 deviceState 不前进，下次变更自动重试 diff，设置不会丢。 */
+  syncInputs();
+  setTimeout(()=>{ persist(); baseline = {...state}; }, 0);
 }
 
 /* ───────────────────────── 6. 监视项目列表 ───────────────────────── */
@@ -1304,10 +1314,10 @@ function renderModules(){
     const on = !!state[m.key];
     const chips = (m.chips||[]).map(([lb,ck])=>
       `<button class="mod-chip ${state[ck]?'active':''}" data-chip="${ck}">${lb}</button>`).join('');
-    return `<div class="mod-card ${on?'on':''}" data-mod="${m.key}">
+    return `<div class="mod-card ${on?'on':''}" data-mod="${m.key}" role="button" aria-pressed="${on}">
       <div class="mod-head">
         <span class="mod-name">${m.label}</span>
-        <button class="mod-badge" data-toggle="${m.key}">${on?'开':'关'}</button>
+        <span class="mod-badge">${on?'开':'关'}</span>
       </div>
       <div class="mod-sub">${m.sub}</div>
       <div class="mod-foot">
@@ -1319,9 +1329,10 @@ function renderModules(){
       </div>
     </div>`;
   }).join('');
+  /* 2026-11-18 点击手感修复：判定顺序 chip → 箭头 → 整卡（从内到外，
+     chip/箭头都在卡内，必须先于整卡判定）。整卡可点——点卡身任意位置
+     即切换开关，徽标只是状态指示器。 */
   box.onclick = e=>{
-    const t = e.target.closest('[data-toggle]');
-    if(t){ setKey(t.dataset.toggle, !state[t.dataset.toggle]); renderModules(); return; }
     const chip = e.target.closest('.mod-chip');
     if(chip){ setKey(chip.dataset.chip, !state[chip.dataset.chip]); renderModules(); return; }
     const mv = e.target.closest('.mod-arrow');
@@ -1332,7 +1343,10 @@ function renderModules(){
       [order[i], order[j]] = [order[j], order[i]];
       setKey('module_order', order.join(','));
       renderModules();
+      return;
     }
+    const card = e.target.closest('.mod-card');
+    if(card){ setKey(card.dataset.mod, !state[card.dataset.mod]); renderModules(); }
   };
   syncInputs();
 }
@@ -1425,7 +1439,7 @@ function switchTab(tab){
   ui.tab = tab; persist();
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
-  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.20';
+  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.22';
   document.getElementById('scroll').scrollTop = 0;
 }
 /* GPU 读数 / 设置通道诊断轮询已随状态页移除（2026-11-18）：
@@ -1503,11 +1517,13 @@ function bindAppPicker(){
 /* lull.16/17：以下选项已从界面移除。启动时把设备 perf 表里对应键删掉
    （commit null），让 NexusBridge 回退内置默认。删完后 state/baseline/
    deviceState 回填 DEFAULTS 同值——预览渲染（排序/名称）仍需要这些键，
-   且与设备语义一致，后续 diff 也不会再误提交。幂等。 */
+   且与设备语义一致，后续 diff 也不会再误提交。幂等。
+   ⚠️ module_order 不在清单里：2026-11-18 卡片网格版把排序做回正式功能，
+   放进 purge 会导致「每次打开 WebUI 都清掉用户排好的顺序」。 */
 const REMOVED_KEYS = ['dual_cell','fps_src_panel','fps_src_sf_latency','fps_src_sf_timestats',
   'fps_src_fpsgo','fps_src_ged','fps_src_vsync','stats_enabled','stats_interval_sec',
   'stats_notification','stats_screen_on_only',
-  'module_order','space_before',
+  'space_before',
   'name_mod_cpu','name_mod_gpu','name_mod_ram','name_mod_zram','name_mod_temp',
   'name_mod_power','name_mod_current','name_mod_fps','name_mod_cpu_temp','name_mod_net'];
 function purgeRemovedKeys(){
