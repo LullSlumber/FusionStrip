@@ -836,7 +836,7 @@ svg{display:block}
       <div class="brand-mark" data-icon="activity"></div>
       <div class="topbar-titles">
         <b>FusionStrip</b>
-        <span id="topbarSub">项目与外观 · 1.9.4-lull.27</span>
+        <span id="topbarSub">项目与外观 · 1.9.4-lull.28</span>
       </div>
       <button class="icon-btn" id="themeBtn" title="切换浅色 / 深色"><span data-icon="sun"></span></button>
       <button class="icon-btn" data-action="reset" title="恢复默认设置"><span data-icon="rotate"></span></button>
@@ -1146,6 +1146,23 @@ const NFBridge = {
   }
 };
 
+/* lull.28：白名单专用写入，逐行对应参考项目（Strip-HUD）MainActivity.saveWhitelist：
+   本地 commit + 立即 publish 整表推 Settings.Global，不走通用乐观定时器/diff 镜像/
+   防抖——勾选/取消勾选一拍同步落三通道，杜绝改完立刻退 WebUI 时静默丢失。 */
+function saveWhitelist(packages){
+  const raw = packages.join('\n');
+  state.app_whitelist = raw;
+  const nf = hasNative();
+  if(nf){
+    try{ nf.commit(JSON.stringify({app_whitelist: raw})); }catch(e){}
+    try{ nf.publish(); }catch(e){}
+    if(deviceState) deviceState.app_whitelist = raw;
+  }
+  persist();
+  baseline = {...state};
+  syncInputs();
+}
+
 function load(){
   const d = NFBridge.read();
   if(d.state) state = {...DEFAULTS, ...d.state};
@@ -1395,6 +1412,15 @@ function bindInputs(root){
     if(el.dataset.bound) return;
     el.dataset.bound = '1';
     const k = el.dataset.key;
+    /* lull.28：白名单不走通用乐观写入（对应参考项目「白名单由原生 AppPicker
+       维护，避免两个编辑入口打架」）——手填 textarea 在 change（失焦/收起）时
+       走专用 saveWhitelist，同步落三通道 */
+    if(k === 'app_whitelist'){
+      el.addEventListener('change', ()=>{
+        saveWhitelist(String(el.value||'').split(/[\n,\s]+/).filter(Boolean));
+      });
+      return;
+    }
     const handler = ()=>{
       let v;
       if(el.type === 'checkbox') v = el.checked;
@@ -1439,7 +1465,7 @@ function switchTab(tab){
   ui.tab = tab; persist();
   document.querySelectorAll('.page').forEach(p=>p.hidden = p.dataset.page !== tab);
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab === tab));
-  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.27';
+  document.getElementById('topbarSub').textContent = names[tab] + ' · 1.9.4-lull.28';
   document.getElementById('scroll').scrollTop = 0;
 }
 /* GPU 读数 / 设置通道诊断轮询已随状态页移除（2026-11-18）：
@@ -1507,12 +1533,7 @@ function bindAppPicker(){
     // 保留手填但不在列表里的包名（例如已卸载应用、系统组件）
     const listed = new Set(appPickerData.map(a=>a.pkg));
     const kept = [...currentWhitelist()].filter(p=>!listed.has(p));
-    state.app_whitelist = [...kept, ...picked].join('\n');
-    onStateChange();
-    // lull.27：白名单变更立即整表发布，不等 150ms 防抖——参考 Strip-HUD 原生
-    // AppPicker 的做法（勾选一拍同步落到本地+Remote+Global 三通道），杜绝
-    // 「改完立刻退出 WebUI、发布还挂在防抖窗口里被丢掉」的静默丢失。
-    NFBridge.publish();
+    saveWhitelist([...kept, ...picked]);
     scrim.hidden = true;
     NFBridge.toast('白名单已更新 · ' + (kept.length + picked.length) + ' 个包名');
   });
